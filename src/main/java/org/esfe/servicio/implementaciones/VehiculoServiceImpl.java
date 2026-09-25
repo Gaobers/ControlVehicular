@@ -38,8 +38,5 @@ public class VehiculoServiceImpl implements vehiculoService {
         return Collections.emptyList();
     }
 
-    @Override
-    public List obtenerListaAuxiliar() {
-        return Collections.emptyList();
-    }
+
 }

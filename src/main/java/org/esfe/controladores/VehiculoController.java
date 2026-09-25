@@ -90,12 +90,4 @@ public class VehiculoController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-
-    @GetMapping("/auxiliar")
-    public ResponseEntity<?> obtenerListaAuxiliar() {
-
-        List<?> lista = vehiculoService.obtenerListaAuxiliar();
-
-        return ResponseEntity.ok(lista);
-    }
 }
