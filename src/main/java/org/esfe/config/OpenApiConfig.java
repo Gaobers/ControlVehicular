@@ -20,8 +20,14 @@ public class OpenApiConfig {
                         .title("Control Vehicular API")
                         .version("1.0.0")
                         .description("API para gestión de vehículos y kilometraje")
-                        .license(new License().name("MIT").url("https://opensource.org/licenses/MIT")))
-                .servers(List.of(new Server().url("http://localhost:8080").description("Servidor local")))
+                        .license(new License()
+                                .name("MIT")
+                                .url("https://opensource.org/licenses/MIT")))
+                .servers(List.of(
+                        new Server()
+                                .url("/")
+                                .description("Servidor actual")
+                ))
                 .components(new Components());
     }
 }
