@@ -16,34 +16,20 @@
 	<artifactId>controlvehicular</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
-	<name/>
-	<description/>
-	<url/>
-
-	<licenses>
-		<license/>
-	</licenses>
-
-	<developers>
-		<developer/>
-	</developers>
-
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<name>ControlVehicular</name>
+	<description>API REST para el sistema de control vehicular</description>
 
 	<properties>
 		<java.version>21</java.version>
+		<lombok.version>1.18.46</lombok.version>
 	</properties>
 
 	<dependencies>
 
-		<!-- ===================================================== -->
-		<!-- BASE DE DATOS / JPA -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
+		<!-- JPA / BASE DE DATOS -->
+		<!-- ============================= -->
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -55,34 +41,40 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- ===================================================== -->
-		<!-- API REST / SPRING MVC -->
-		<!-- ===================================================== -->
+
+		<!-- ============================= -->
+		<!-- API REST -->
+		<!-- ============================= -->
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- ===================================================== -->
+
+		<!-- ============================= -->
 		<!-- VALIDACIONES -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
-		<!-- ===================================================== -->
+
+		<!-- ============================= -->
 		<!-- SEGURIDAD -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
-		<!-- ===================================================== -->
+
+		<!-- ============================= -->
 		<!-- JWT -->
-		<!-- JSON Web Tokens -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
 
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
@@ -105,10 +97,9 @@
 		</dependency>
 
 
-		<!-- ===================================================== -->
+		<!-- ============================= -->
 		<!-- MODELMAPPER -->
-		<!-- Conversión entre entidades y DTOs -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
 
 		<dependency>
 			<groupId>org.modelmapper</groupId>
@@ -117,18 +108,22 @@
 		</dependency>
 
 
-		<!-- ===================================================== -->
+		<!-- ============================= -->
 		<!-- LOMBOK -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
+
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<optional>true</optional>
+			<version>${lombok.version}</version>
+			<scope>provided</scope>
 		</dependency>
 
-		<!-- ===================================================== -->
+
+		<!-- ============================= -->
 		<!-- DEVTOOLS -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
@@ -136,20 +131,22 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- ===================================================== -->
+
+		<!-- ============================= -->
 		<!-- SWAGGER / OPENAPI -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
+
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>2.8.5</version>
 		</dependency>
 
-		<!-- ===================================================== -->
+
+		<!-- ============================= -->
 		<!-- TESTS -->
-		<!-- spring-boot-starter-test ya incluye JUnit, Mockito, -->
-		<!-- AssertJ, MockMvc y soporte para tests de JPA -->
-		<!-- ===================================================== -->
+		<!-- ============================= -->
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -166,62 +163,53 @@
 
 
 	<build>
+
 		<plugins>
 
+			<!-- SPRING BOOT -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
 			</plugin>
 
 
+			<!-- COMPILADOR JAVA + LOMBOK -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.15.0</version>
 
-				<executions>
+				<configuration>
 
-					<execution>
-						<id>default-compile</id>
-						<phase>compile</phase>
+					<release>${java.version}</release>
 
-						<goals>
-							<goal>compile</goal>
-						</goals>
+					<proc>full</proc>
 
-						<configuration>
-							<annotationProcessorPaths>
-								<path>
-									<groupId>org.projectlombok</groupId>
-									<artifactId>lombok</artifactId>
-								</path>
-							</annotationProcessorPaths>
-						</configuration>
-					</execution>
+					<annotationProcessorPaths>
 
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
 
-					<execution>
-						<id>default-testCompile</id>
-						<phase>test-compile</phase>
+					</annotationProcessorPaths>
 
-						<goals>
-							<goal>testCompile</goal>
-						</goals>
-
-						<configuration>
-							<annotationProcessorPaths>
-								<path>
-									<groupId>org.projectlombok</groupId>
-									<artifactId>lombok</artifactId>
-								</path>
-							</annotationProcessorPaths>
-						</configuration>
-					</execution>
-
-				</executions>
+				</configuration>
 
 			</plugin>
 
 		</plugins>
+
 	</build>
 
 </project>
