@@ -481,7 +481,7 @@ note bottom of Mantenimiento
 fechaObjetivo y kilometrajeObjetivo
 pueden utilizarse individualmente
 o en conjunto.
-
+ReprogramacionMantenimiento
 fechaRealizacion y kilometrajeRealizacion
 permanecen vacios hasta que el
 mantenimiento sea realizado.
