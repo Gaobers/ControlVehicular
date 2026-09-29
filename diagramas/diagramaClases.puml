@@ -43,19 +43,19 @@ hide empty members
 package "Usuarios y Vehiculos" {
 
     class Usuario {
-        - id: int
+        - id: Long
         - nombreCompleto: String
         - correo: String
         - contrasena: String
         - telefono: String
         - rol: RolUsuario
         - estado: EstadoUsuario
-        - fechaRegistro: datetime
+        - fechaRegistro: LocalDateTime
         --
         + obtenerTodos(): List<Usuario>
-        + obtenerPorId(id: int): Optional<Usuario>
+        + obtenerPorId(id: Long): Optional<Usuario>
         + guardar(u: Usuario): Usuario
-        + eliminar(id: int): void
+        + eliminar(id: Long): void
         + obtenerTodosPaginados(pageable: Pageable): Page<Usuario>
         + buscarPorNombreOCorreo(valor: String): List<Usuario>
         + cambiarContrasena(nuevaContrasena: String): boolean
@@ -66,62 +66,66 @@ package "Usuarios y Vehiculos" {
 
 
     class Vehiculo {
-        - id: int
+        - id: Long
         - propietario: Usuario
         - marca: String
         - modelo: String
-        - anio: int
+        - anio: Integer
         - placa: String
         - color: String
-        - kilometrajeActual: double
+        - kilometrajeActual: Double
         - vin: String
         - motor: String
         - estado: EstadoVehiculo
-        - fechaRegistro: datetime
+        - fechaRegistro: LocalDateTime
         --
         + obtenerTodos(): List<Vehiculo>
-        + obtenerPorId(id: int): Optional<Vehiculo>
+        + obtenerPorId(id: Long): Optional<Vehiculo>
         + guardar(v: Vehiculo): Vehiculo
-        + eliminar(id: int): void
+        + eliminar(id: Long): void
         + obtenerTodosPaginados(pageable: Pageable): Page<Vehiculo>
         + buscarPorPlaca(placa: String): Optional<Vehiculo>
-        + obtenerPorPropietario(idUsuario: int): List<Vehiculo>
-        + actualizarKilometraje(km: double): void
+        + obtenerPorPropietario(idUsuario: Long): List<Vehiculo>
+        + actualizarKilometraje(km: Double): void
         + archivar(): void
+        + reactivar(): void
         + validarPlaca(): boolean
     }
 
 
     class RegistroKilometraje {
-        - id: int
+        - id: Long
         - vehiculo: Vehiculo
-        - kilometraje: double
-        - fechaHora: datetime
+        - kilometraje: Double
+        - fechaHora: LocalDateTime
+        - activo: boolean
         --
         + obtenerTodos(): List<RegistroKilometraje>
-        + obtenerPorId(id: int): Optional<RegistroKilometraje>
+        + obtenerPorId(id: Long): Optional<RegistroKilometraje>
         + guardar(r: RegistroKilometraje): RegistroKilometraje
-        + eliminar(id: int): void
-        + obtenerPorVehiculo(idVehiculo: int): List<RegistroKilometraje>
-        + obtenerUltimoRegistro(idVehiculo: int): Optional<RegistroKilometraje>
+        + eliminar(id: Long): void
+        + obtenerPorVehiculo(idVehiculo: Long): List<RegistroKilometraje>
+        + obtenerUltimoRegistro(idVehiculo: Long): Optional<RegistroKilometraje>
         + validarKilometrajeAnterior(): boolean
+        + activar(): void
+        + desactivar(): void
     }
 
 
     class DocumentoVehiculo {
-        - id: int
+        - id: Long
         - vehiculo: Vehiculo
         - tipo: TipoDocumento
         - descripcion: String
         - numeroDocumento: String
-        - fechaVencimiento: date
-        - fechaActualizacion: datetime
+        - fechaVencimiento: LocalDate
+        - fechaActualizacion: LocalDateTime
         --
         + obtenerTodos(): List<DocumentoVehiculo>
-        + obtenerPorId(id: int): Optional<DocumentoVehiculo>
+        + obtenerPorId(id: Long): Optional<DocumentoVehiculo>
         + guardar(d: DocumentoVehiculo): DocumentoVehiculo
-        + eliminar(id: int): void
-        + obtenerPorVehiculo(idVehiculo: int): List<DocumentoVehiculo>
+        + eliminar(id: Long): void
+        + obtenerPorVehiculo(idVehiculo: Long): List<DocumentoVehiculo>
         + verificarVencimiento(): boolean
         + verificarProximidad(): boolean
     }
@@ -135,102 +139,121 @@ package "Usuarios y Vehiculos" {
 package "Mantenimientos y Alertas" {
 
     class Mantenimiento {
-        - id: int
+        - id: Long
         - vehiculo: Vehiculo
         - servicio: String
         - observaciones: String
-        - fechaObjetivo: date
-        - kilometrajeObjetivo: double
+        - fechaObjetivo: LocalDate
+        - kilometrajeObjetivo: Double
         - estado: EstadoMantenimiento
-        - fechaCreacion: datetime
-        - fechaRealizacion: date
-        - kilometrajeRealizacion: double
+        - activo: boolean
+        - fechaCreacion: LocalDateTime
+        - fechaRealizacion: LocalDate
+        - kilometrajeRealizacion: Double
         --
         + obtenerTodos(): List<Mantenimiento>
-        + obtenerPorId(id: int): Optional<Mantenimiento>
+        + obtenerPorId(id: Long): Optional<Mantenimiento>
         + guardar(m: Mantenimiento): Mantenimiento
-        + eliminar(id: int): void
+        + eliminar(id: Long): void
         + obtenerTodosPaginados(pageable: Pageable): Page<Mantenimiento>
-        + obtenerPorVehiculo(idVehiculo: int): List<Mantenimiento>
+        + obtenerPorVehiculo(idVehiculo: Long): List<Mantenimiento>
         + filtrarPorEstado(estado: EstadoMantenimiento): List<Mantenimiento>
         + calcularEstado(): EstadoMantenimiento
-        + marcarComoRealizado(fecha: date, kilometraje: double): void
-        + reprogramar(fecha: date, kilometraje: double): void
+        + marcarComoRealizado(fecha: LocalDate, kilometraje: Double): void
+        + reprogramar(fecha: LocalDate, kilometraje: Double): void
+        + activar(): void
+        + desactivar(): void
+    }
+
+
+    class ReprogramacionMantenimiento {
+        - id: Long
+        - mantenimiento: Mantenimiento
+        - fechaObjetivoAnterior: LocalDate
+        - kilometrajeObjetivoAnterior: Double
+        - fechaObjetivoNueva: LocalDate
+        - kilometrajeObjetivoNuevo: Double
+        - fechaReprogramacion: LocalDateTime
+        --
+        + obtenerTodos(): List<ReprogramacionMantenimiento>
+        + obtenerPorId(id: Long): Optional<ReprogramacionMantenimiento>
+        + guardar(r: ReprogramacionMantenimiento): ReprogramacionMantenimiento
+        + obtenerPorMantenimiento(idMantenimiento: Long): List<ReprogramacionMantenimiento>
     }
 
 
     class RecurrenciaMantenimiento {
-        - id: int
+        - id: Long
         - mantenimiento: Mantenimiento
         - tipo: TipoRecurrencia
-        - intervaloMeses: int
-        - intervaloKilometros: double
+        - intervaloMeses: Integer
+        - intervaloKilometros: Double
         - activa: boolean
         --
         + obtenerTodos(): List<RecurrenciaMantenimiento>
-        + obtenerPorId(id: int): Optional<RecurrenciaMantenimiento>
+        + obtenerPorId(id: Long): Optional<RecurrenciaMantenimiento>
         + guardar(r: RecurrenciaMantenimiento): RecurrenciaMantenimiento
-        + eliminar(id: int): void
-        + calcularSiguienteFecha(fechaBase: date): date
-        + calcularSiguienteKilometraje(kmBase: double): double
+        + eliminar(id: Long): void
+        + calcularSiguienteFecha(fechaBase: LocalDate): LocalDate
+        + calcularSiguienteKilometraje(kmBase: Double): Double
         + activar(): void
         + desactivar(): void
     }
 
 
     class RecordatorioMantenimiento {
-        - id: int
+        - id: Long
         - mantenimiento: Mantenimiento
-        - diasAnticipacion: int
-        - kilometrosAnticipacion: double
+        - diasAnticipacion: Integer
+        - kilometrosAnticipacion: Double
         - activo: boolean
         --
         + obtenerTodos(): List<RecordatorioMantenimiento>
-        + obtenerPorId(id: int): Optional<RecordatorioMantenimiento>
+        + obtenerPorId(id: Long): Optional<RecordatorioMantenimiento>
         + guardar(r: RecordatorioMantenimiento): RecordatorioMantenimiento
-        + eliminar(id: int): void
-        + verificarPorFecha(fechaActual: date): boolean
-        + verificarPorKilometraje(kmActual: double): boolean
+        + eliminar(id: Long): void
+        + verificarPorFecha(fechaActual: LocalDate): boolean
+        + verificarPorKilometraje(kmActual: Double): boolean
         + activar(): void
         + desactivar(): void
     }
 
 
     class Alerta {
-        - id: int
+        - id: Long
         - usuario: Usuario
         - mantenimiento: Mantenimiento
         - documento: DocumentoVehiculo
         - tipo: TipoAlerta
         - motivo: String
-        - fechaGenerada: datetime
+        - fechaGenerada: LocalDateTime
         - leida: boolean
         --
         + obtenerTodos(): List<Alerta>
-        + obtenerPorId(id: int): Optional<Alerta>
+        + obtenerPorId(id: Long): Optional<Alerta>
         + guardar(a: Alerta): Alerta
-        + eliminar(id: int): void
-        + obtenerPorUsuario(idUsuario: int): List<Alerta>
-        + obtenerNoLeidas(idUsuario: int): List<Alerta>
+        + eliminar(id: Long): void
+        + obtenerPorUsuario(idUsuario: Long): List<Alerta>
+        + obtenerNoLeidas(idUsuario: Long): List<Alerta>
         + marcarComoLeida(): void
         + enviarNotificacion(): boolean
     }
 
 
     class ProyeccionMantenimiento {
-        - id: int
+        - id: Long
         - mantenimiento: Mantenimiento
-        - promedioKmDia: double
-        - kilometrosRestantes: double
-        - diasEstimados: int
-        - fechaEstimada: date
-        - fechaCalculo: datetime
+        - promedioKmDia: Double
+        - kilometrosRestantes: Double
+        - diasEstimados: Integer
+        - fechaEstimada: LocalDate
+        - fechaCalculo: LocalDateTime
         --
-        + obtenerPorMantenimiento(idMantenimiento: int): Optional<ProyeccionMantenimiento>
-        + calcularPromedioKmDia(): double
-        + calcularKilometrosRestantes(): double
-        + calcularDiasEstimados(): int
-        + calcularFechaEstimada(): date
+        + obtenerPorMantenimiento(idMantenimiento: Long): Optional<ProyeccionMantenimiento>
+        + calcularPromedioKmDia(): Double
+        + calcularKilometrosRestantes(): Double
+        + calcularDiasEstimados(): Integer
+        + calcularFechaEstimada(): LocalDate
         + recalcular(): ProyeccionMantenimiento
     }
 }
@@ -243,40 +266,43 @@ package "Mantenimientos y Alertas" {
 package "Gastos y Reportes" {
 
     class Gasto {
-        - id: int
+        - id: Long
         - vehiculo: Vehiculo
         - categoria: String
-        - monto: double
-        - fecha: date
+        - monto: BigDecimal
+        - fecha: LocalDate
         - descripcion: String
-        - fechaRegistro: datetime
+        - fechaRegistro: LocalDateTime
+        - activo: boolean
         --
         + obtenerTodos(): List<Gasto>
-        + obtenerPorId(id: int): Optional<Gasto>
+        + obtenerPorId(id: Long): Optional<Gasto>
         + guardar(g: Gasto): Gasto
-        + eliminar(id: int): void
+        + eliminar(id: Long): void
         + obtenerTodosPaginados(pageable: Pageable): Page<Gasto>
-        + obtenerPorVehiculo(idVehiculo: int): List<Gasto>
-        + filtrarPorPeriodo(fechaInicio: date, fechaFin: date): List<Gasto>
+        + obtenerPorVehiculo(idVehiculo: Long): List<Gasto>
+        + filtrarPorPeriodo(fechaInicio: LocalDate, fechaFin: LocalDate): List<Gasto>
         + filtrarPorCategoria(categoria: String): List<Gasto>
-        + calcularTotal(): double
+        + calcularTotal(): BigDecimal
         + validarMonto(): boolean
+        + activar(): void
+        + desactivar(): void
     }
 
 
     class ComprobanteGasto {
-        - id: int
+        - id: Long
         - gasto: Gasto
         - nombreArchivo: String
         - tipoArchivo: String
         - rutaArchivo: String
-        - fechaAdjunto: datetime
+        - fechaAdjunto: LocalDateTime
         --
         + obtenerTodos(): List<ComprobanteGasto>
-        + obtenerPorId(id: int): Optional<ComprobanteGasto>
+        + obtenerPorId(id: Long): Optional<ComprobanteGasto>
         + guardar(c: ComprobanteGasto): ComprobanteGasto
-        + eliminar(id: int): void
-        + obtenerPorGasto(idGasto: int): Optional<ComprobanteGasto>
+        + eliminar(id: Long): void
+        + obtenerPorGasto(idGasto: Long): Optional<ComprobanteGasto>
         + validarArchivo(): boolean
         + descargar(): void
         + compartir(): void
@@ -284,18 +310,18 @@ package "Gastos y Reportes" {
 
 
     class ReporteGasto {
-        - id: int
+        - id: Long
         - usuario: Usuario
-        - fechaInicio: date
-        - fechaFin: date
-        - total: double
-        - fechaGeneracion: datetime
+        - fechaInicio: LocalDate
+        - fechaFin: LocalDate
+        - total: BigDecimal
+        - fechaGeneracion: LocalDateTime
         - rutaArchivo: String
         --
         + obtenerTodos(): List<ReporteGasto>
-        + obtenerPorId(id: int): Optional<ReporteGasto>
-        + generar(fechaInicio: date, fechaFin: date): ReporteGasto
-        + calcularTotal(): double
+        + obtenerPorId(id: Long): Optional<ReporteGasto>
+        + generar(fechaInicio: LocalDate, fechaFin: LocalDate): ReporteGasto
+        + calcularTotal(): BigDecimal
         + generarPDF(): void
         + descargar(): void
         + compartir(): void
@@ -363,14 +389,15 @@ Vehiculo "1" -- "0..*" DocumentoVehiculo : posee >
 Vehiculo "1" -- "0..*" Mantenimiento : posee >
 Vehiculo "1" -- "0..*" Gasto : genera >
 
+Mantenimiento "1" -- "0..*" ReprogramacionMantenimiento : conserva historial >
 Mantenimiento "1" -- "0..1" RecurrenciaMantenimiento : configura >
 Mantenimiento "1" -- "0..1" RecordatorioMantenimiento : configura >
-Mantenimiento "1" -- "0..*" Alerta : genera >
+Mantenimiento "0..1" -- "0..*" Alerta : origina >
 Mantenimiento "1" -- "0..1" ProyeccionMantenimiento : proyecta >
 
 Usuario "1" -- "0..*" Alerta : recibe >
 
-DocumentoVehiculo "1" -- "0..*" Alerta : genera >
+DocumentoVehiculo "0..1" -- "0..*" Alerta : origina >
 
 Gasto "1" -- "0..1" ComprobanteGasto : adjunta >
 
@@ -405,7 +432,8 @@ Vehiculo -[hidden]down- RegistroKilometraje
 RegistroKilometraje -[hidden]down- DocumentoVehiculo
 
 ' Columna Mantenimientos
-Mantenimiento -[hidden]down- RecurrenciaMantenimiento
+Mantenimiento -[hidden]down- ReprogramacionMantenimiento
+ReprogramacionMantenimiento -[hidden]down- RecurrenciaMantenimiento
 RecurrenciaMantenimiento -[hidden]down- RecordatorioMantenimiento
 RecordatorioMantenimiento -[hidden]down- Alerta
 Alerta -[hidden]down- ProyeccionMantenimiento
@@ -441,15 +469,56 @@ propietario de vehiculos.
 end note
 
 note bottom of Alerta
-Una alerta puede originarse
-por un mantenimiento o por
-un documento del vehiculo.
+Una alerta puede originarse por un
+mantenimiento o por un documento.
+
+mantenimiento y documento son
+opcionales individualmente, pero
+al menos uno debe estar asociado.
 end note
 
 note bottom of Mantenimiento
 fechaObjetivo y kilometrajeObjetivo
 pueden utilizarse individualmente
 o en conjunto.
+
+fechaRealizacion y kilometrajeRealizacion
+permanecen vacios hasta que el
+mantenimiento sea realizado.
+
+La eliminacion es logica:
+eliminar/desactivar cambia activo=false.
+No se borra el registro fisicamente.
+end note
+
+note bottom of ReprogramacionMantenimiento
+Cada reprogramacion conserva los
+valores anteriores y los nuevos
+para mantener el historial.
+end note
+
+note bottom of RegistroKilometraje
+La eliminacion es logica:
+eliminar/desactivar cambia activo=false.
+No se borra el registro fisicamente.
+end note
+
+note bottom of Gasto
+La eliminacion es logica:
+eliminar/desactivar cambia activo=false.
+No se borra el registro fisicamente.
+end note
+
+note bottom of RecordatorioMantenimiento
+La eliminacion es logica:
+eliminar/desactivar cambia activo=false.
+No se borra el registro fisicamente.
+end note
+
+note bottom of Vehiculo
+La eliminacion es logica mediante
+EstadoVehiculo.ARCHIVADO.
+reactivar() restaura el estado ACTIVO.
 end note
 
 @enduml
