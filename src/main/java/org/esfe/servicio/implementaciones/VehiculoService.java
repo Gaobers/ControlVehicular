@@ -1,12 +1,9 @@
 package org.esfe.servicio.implementaciones;
 
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.Valid;
 import org.esfe.dtos.Vehiculo.VehiculoGuardarDTO;
 import org.esfe.dtos.Vehiculo.VehiculoModificarDTO;
 import org.esfe.dtos.Vehiculo.VehiculoSalidaDTO;
-import org.esfe.dtos.VehiculoRegistroRequest;
-import org.esfe.dtos.VehiculoResponse;
 import org.esfe.enums.EstadoVehiculo;
 import org.esfe.modelos.Vehiculo;
 import org.esfe.repositorios.VehiculoRepository;
@@ -16,15 +13,14 @@ import org.springframework.stereotype.Service;
 import org.esfe.servicio.interfaces.IVehiculoService;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
 
 @Service
-public class VehiculoServiceImpl implements IVehiculoService {
+public class VehiculoService implements IVehiculoService {
 
     private final VehiculoRepository vehiculoRepository;
 
-    public VehiculoServiceImpl(VehiculoRepository vehiculoRepository) {
+    public VehiculoService(VehiculoRepository vehiculoRepository) {
         this.vehiculoRepository = vehiculoRepository;
     }
 

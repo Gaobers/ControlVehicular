@@ -10,7 +10,7 @@ import org.esfe.servicio.interfaces.IVehiculoService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-//import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,9 +28,9 @@ public class VehiculoController {
     }
 
 
-    //@PreAuthorize(
-//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
-//    )
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @GetMapping
     public ResponseEntity<Page<VehiculoSalidaDTO>>
     mostrarTodosPaginados(
@@ -44,9 +44,9 @@ public class VehiculoController {
     }
 
 
-//    @PreAuthorize(
-//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
-//    )
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @GetMapping("/lista")
     public ResponseEntity<List<VehiculoSalidaDTO>>
     mostrarTodos() {
@@ -57,9 +57,9 @@ public class VehiculoController {
     }
 
 
-//    @PreAuthorize(
-//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
-//    )
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @GetMapping("/{id}")
     public ResponseEntity<VehiculoSalidaDTO>
     buscarPorId(
@@ -72,9 +72,9 @@ public class VehiculoController {
     }
 
 
-//    @PreAuthorize(
-//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
-//    )
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @PostMapping
     public ResponseEntity<VehiculoSalidaDTO>
     crear(
@@ -94,9 +94,9 @@ public class VehiculoController {
     }
 
 
-//    @PreAuthorize(
-//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
-//    )
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @PutMapping("/{id}")
     public ResponseEntity<VehiculoSalidaDTO>
     editar(
@@ -117,9 +117,9 @@ public class VehiculoController {
     }
 
 
-//    @PreAuthorize(
-//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
-//    )
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @DeleteMapping("/{id}")
     public ResponseEntity<String>
     eliminar(
