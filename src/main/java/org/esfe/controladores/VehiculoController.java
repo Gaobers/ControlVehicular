@@ -1,93 +1,135 @@
 package org.esfe.controladores;
 
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import org.esfe.dtos.VehiculoRegistroRequest;
-import org.esfe.dtos.VehiculoResponse;
-import org.esfe.servicio.interfaces.vehiculoService;
+import org.esfe.dtos.Vehiculo.VehiculoGuardarDTO;
+import org.esfe.dtos.Vehiculo.VehiculoModificarDTO;
+import org.esfe.dtos.Vehiculo.VehiculoSalidaDTO;
+import org.esfe.servicio.interfaces.IVehiculoService;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+//import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/vehiculos")
+@RequestMapping("/api/vehiculos")
 public class VehiculoController {
 
-    private final vehiculoService vehiculoService;
+    private final IVehiculoService vehiculoService;
 
-    public VehiculoController(vehiculoService vehiculoService) {
+    public VehiculoController(
+            IVehiculoService vehiculoService
+    ) {
         this.vehiculoService = vehiculoService;
     }
 
 
-    @GetMapping("/{id}")
-    public ResponseEntity<VehiculoResponse> obtenerPorId(
-            @PathVariable Long id) {
-
-        VehiculoResponse response = vehiculoService.obtenerPorId(id);
-
-        return ResponseEntity.ok(response);
-    }
-
-
-    @PutMapping("/{id}")
-    public ResponseEntity<VehiculoResponse> actualizarVehiculo(
-            @PathVariable Long id,
-            @Valid @RequestBody VehiculoRegistroRequest request,
-            @RequestHeader("X-Usuario-Id") Long usuarioAutenticadoId,
-            @RequestHeader("X-Usuario-Rol") String rolUsuario) {
-
-        VehiculoResponse response = vehiculoService.actualizarVehiculo(
-                id,
-                request,
-                usuarioAutenticadoId,
-                rolUsuario
-        );
-
-        return ResponseEntity.ok(response);
-    }
-
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarVehiculo(
-            @PathVariable Long id,
-            @RequestHeader("X-Usuario-Id") Long usuarioAutenticadoId,
-            @RequestHeader("X-Usuario-Rol") String rolUsuario) {
-
-        vehiculoService.eliminarVehiculo(
-                id,
-                usuarioAutenticadoId,
-                rolUsuario
-        );
-
-        return ResponseEntity.noContent().build();
-    }
-
-
+    //@PreAuthorize(
+//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+//    )
     @GetMapping
-    public ResponseEntity<List<VehiculoResponse>> listarVehiculos() {
+    public ResponseEntity<Page<VehiculoSalidaDTO>>
+    mostrarTodosPaginados(
+            Pageable pageable
+    ) {
 
-        List<VehiculoResponse> lista = vehiculoService.listarTodos();
-
-        return ResponseEntity.ok(lista);
-    }
-
-
-    @PostMapping
-    public ResponseEntity<VehiculoResponse> registrarVehiculo(
-            @Valid @RequestBody VehiculoRegistroRequest request,
-            @RequestHeader("X-Usuario-Id") Long usuarioAutenticadoId,
-            @RequestHeader("X-Usuario-Rol") String rolUsuario) {
-
-        VehiculoResponse response = vehiculoService.registrarVehiculo(
-                request,
-                usuarioAutenticadoId,
-                rolUsuario
+        return ResponseEntity.ok(
+                vehiculoService
+                        .obtenerTodosPaginados(pageable)
         );
-
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+
+//    @PreAuthorize(
+//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+//    )
+    @GetMapping("/lista")
+    public ResponseEntity<List<VehiculoSalidaDTO>>
+    mostrarTodos() {
+
+        return ResponseEntity.ok(
+                vehiculoService.obtenerTodos()
+        );
+    }
+
+
+//    @PreAuthorize(
+//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+//    )
+    @GetMapping("/{id}")
+    public ResponseEntity<VehiculoSalidaDTO>
+    buscarPorId(
+            @PathVariable Long id
+    ) {
+
+        return ResponseEntity.ok(
+                vehiculoService.obtenerPorId(id)
+        );
+    }
+
+
+//    @PreAuthorize(
+//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+//    )
+    @PostMapping
+    public ResponseEntity<VehiculoSalidaDTO>
+    crear(
+            @Valid
+            @RequestBody
+            VehiculoGuardarDTO vehiculoGuardar
+    ) {
+
+        VehiculoSalidaDTO vehiculo =
+                vehiculoService.crear(
+                        vehiculoGuardar
+                );
+
+        return ResponseEntity
+                .status(201)
+                .body(vehiculo);
+    }
+
+
+//    @PreAuthorize(
+//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+//    )
+    @PutMapping("/{id}")
+    public ResponseEntity<VehiculoSalidaDTO>
+    editar(
+            @PathVariable Long id,
+
+            @Valid
+            @RequestBody
+            VehiculoModificarDTO vehiculoModificar
+    ) {
+
+        vehiculoModificar.setId(id);
+
+        return ResponseEntity.ok(
+                vehiculoService.editar(
+                        vehiculoModificar
+                )
+        );
+    }
+
+
+//    @PreAuthorize(
+//            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+//    )
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String>
+    eliminar(
+            @PathVariable Long id
+    ) {
+
+        vehiculoService.eliminarPorId(id);
+
+        return ResponseEntity.ok(
+                "Vehículo archivado correctamente"
+        );
+    }
 }
