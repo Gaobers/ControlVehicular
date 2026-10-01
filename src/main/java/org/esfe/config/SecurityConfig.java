@@ -1,4 +1,4 @@
-package org.esfe.configuracion;
+package org.esfe.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
