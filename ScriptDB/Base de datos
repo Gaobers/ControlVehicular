@@ -1,0 +1,1296 @@
+USE control_vehicular;
+
+
+
+/* ============================================================
+   CONTROL VEHICULAR
+   Base de datos MySQL 8.0+
+   ============================================================ */
+
+/* ADVERTENCIA: esta instrucción elimina la base completa si ya existe. */
+/* DROP DATABASE IF EXISTS control_vehicular;
+
+CREATE DATABASE control_vehicular
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE control_vehicular; */
+
+SET NAMES utf8mb4;
+SET default_storage_engine = InnoDB;
+
+
+/* ============================================================
+   1. USUARIOS
+   ============================================================ */
+
+CREATE TABLE usuario (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    nombre_completo VARCHAR(120) NOT NULL,
+    correo VARCHAR(190) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    telefono VARCHAR(30) NULL,
+
+    rol ENUM(
+        'CLIENTE',
+        'ADMINISTRADOR'
+    ) NOT NULL DEFAULT 'CLIENTE',
+
+    estado ENUM(
+        'ACTIVO',
+        'DESACTIVADO'
+    ) NOT NULL DEFAULT 'ACTIVO',
+
+    email_verificado_at DATETIME NULL,
+    ultimo_acceso_at DATETIME NULL,
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_usuario_correo
+        UNIQUE (correo)
+);
+
+CREATE INDEX idx_usuario_nombre
+    ON usuario(nombre_completo);
+
+CREATE INDEX idx_usuario_rol
+    ON usuario(rol);
+
+CREATE INDEX idx_usuario_estado
+    ON usuario(estado);
+
+
+
+/* ============================================================
+   2. SESIONES DEL USUARIO
+   Soporte para seguridad y sesiones activas
+   ============================================================ */
+
+CREATE TABLE sesion_usuario (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    usuario_id BIGINT UNSIGNED NOT NULL,
+
+    token_hash VARCHAR(255) NOT NULL,
+
+    dispositivo VARCHAR(150) NULL,
+    sistema_operativo VARCHAR(100) NULL,
+    ip VARCHAR(45) NULL,
+
+    fecha_inicio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ultimo_acceso DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    fecha_expiracion DATETIME NOT NULL,
+    fecha_cierre DATETIME NULL,
+
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT uq_sesion_token
+        UNIQUE (token_hash),
+
+    CONSTRAINT fk_sesion_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_sesion_usuario
+    ON sesion_usuario(usuario_id);
+
+CREATE INDEX idx_sesion_activa
+    ON sesion_usuario(activa);
+
+
+
+/* ============================================================
+   3. RECUPERACION DE CONTRASEÑA
+   ============================================================ */
+
+CREATE TABLE token_recuperacion_password (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    usuario_id BIGINT UNSIGNED NOT NULL,
+
+    token_hash VARCHAR(255) NOT NULL,
+
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_expiracion DATETIME NOT NULL,
+    fecha_uso DATETIME NULL,
+
+    utilizado BOOLEAN NOT NULL DEFAULT FALSE,
+
+    CONSTRAINT uq_recuperacion_token
+        UNIQUE (token_hash),
+
+    CONSTRAINT fk_recuperacion_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_recuperacion_usuario
+    ON token_recuperacion_password(usuario_id);
+
+
+
+/* ============================================================
+   4. VEHICULOS
+   ============================================================ */
+
+CREATE TABLE vehiculo (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    propietario_id BIGINT UNSIGNED NOT NULL,
+
+    marca VARCHAR(80) NOT NULL,
+    modelo VARCHAR(100) NOT NULL,
+
+    anio SMALLINT UNSIGNED NOT NULL,
+
+    placa VARCHAR(20) NOT NULL,
+    color VARCHAR(60) NULL,
+
+    kilometraje_actual DECIMAL(12,1) NOT NULL DEFAULT 0,
+
+    vin VARCHAR(50) NULL,
+    motor VARCHAR(150) NULL,
+
+    estado ENUM(
+        'ACTIVO',
+        'ARCHIVADO'
+    ) NOT NULL DEFAULT 'ACTIVO',
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    fecha_actualizacion DATETIME NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_vehiculo_placa
+        UNIQUE (placa),
+
+    CONSTRAINT uq_vehiculo_vin
+        UNIQUE (vin),
+
+    CONSTRAINT fk_vehiculo_propietario
+        FOREIGN KEY (propietario_id)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_vehiculo_anio
+        CHECK (anio BETWEEN 1900 AND 2200),
+
+    CONSTRAINT chk_vehiculo_kilometraje
+        CHECK (kilometraje_actual >= 0)
+);
+
+CREATE INDEX idx_vehiculo_propietario
+    ON vehiculo(propietario_id);
+
+CREATE INDEX idx_vehiculo_marca_modelo
+    ON vehiculo(marca, modelo);
+
+CREATE INDEX idx_vehiculo_estado
+    ON vehiculo(estado);
+
+
+
+/* ============================================================
+   5. HISTORIAL DE PROPIETARIOS
+   Conserva reasignaciones realizadas por administrador
+   ============================================================ */
+
+CREATE TABLE historial_propietario_vehiculo (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    vehiculo_id BIGINT UNSIGNED NOT NULL,
+    propietario_id BIGINT UNSIGNED NOT NULL,
+
+    cambiado_por BIGINT UNSIGNED NULL,
+
+    fecha_desde DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_hasta DATETIME NULL,
+
+    observacion VARCHAR(255) NULL,
+
+    CONSTRAINT fk_historial_prop_vehiculo
+        FOREIGN KEY (vehiculo_id)
+        REFERENCES vehiculo(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_historial_prop_usuario
+        FOREIGN KEY (propietario_id)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_historial_prop_admin
+        FOREIGN KEY (cambiado_por)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT chk_historial_prop_fechas
+        CHECK (
+            fecha_hasta IS NULL
+            OR fecha_hasta >= fecha_desde
+        )
+);
+
+CREATE INDEX idx_historial_prop_vehiculo
+    ON historial_propietario_vehiculo(vehiculo_id);
+
+CREATE INDEX idx_historial_prop_propietario
+    ON historial_propietario_vehiculo(propietario_id);
+
+
+
+/* ============================================================
+   6. HISTORIAL DE KILOMETRAJE
+   ============================================================ */
+
+CREATE TABLE registro_kilometraje (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    vehiculo_id BIGINT UNSIGNED NOT NULL,
+    registrado_por BIGINT UNSIGNED NULL,
+
+    kilometraje DECIMAL(12,1) NOT NULL,
+
+    fecha_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    observacion VARCHAR(255) NULL,
+
+    CONSTRAINT fk_kilometraje_vehiculo
+        FOREIGN KEY (vehiculo_id)
+        REFERENCES vehiculo(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_kilometraje_usuario
+        FOREIGN KEY (registrado_por)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT chk_registro_kilometraje
+        CHECK (kilometraje >= 0)
+);
+
+CREATE INDEX idx_kilometraje_vehiculo_fecha
+    ON registro_kilometraje(
+        vehiculo_id,
+        fecha_hora DESC
+    );
+
+
+
+/* ============================================================
+   7. DOCUMENTACION DEL VEHICULO
+   ============================================================ */
+
+CREATE TABLE documento_vehiculo (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    vehiculo_id BIGINT UNSIGNED NOT NULL,
+
+    tipo ENUM(
+        'SEGURO',
+        'REVISION_TECNICA',
+        'OTRO'
+    ) NOT NULL,
+
+    descripcion VARCHAR(150) NULL,
+    numero_documento VARCHAR(100) NULL,
+
+    entidad_emisora VARCHAR(150) NULL,
+
+    fecha_emision DATE NULL,
+    fecha_vencimiento DATE NULL,
+
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    fecha_actualizacion DATETIME NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_documento_vehiculo
+        FOREIGN KEY (vehiculo_id)
+        REFERENCES vehiculo(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_documento_fechas
+        CHECK (
+            fecha_emision IS NULL
+            OR fecha_vencimiento IS NULL
+            OR fecha_vencimiento >= fecha_emision
+        )
+);
+
+CREATE INDEX idx_documento_vehiculo
+    ON documento_vehiculo(vehiculo_id);
+
+CREATE INDEX idx_documento_tipo
+    ON documento_vehiculo(tipo);
+
+CREATE INDEX idx_documento_vencimiento
+    ON documento_vehiculo(fecha_vencimiento);
+
+
+
+/* ============================================================
+   8. MANTENIMIENTOS
+   ============================================================ */
+
+CREATE TABLE mantenimiento (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    vehiculo_id BIGINT UNSIGNED NOT NULL,
+    creado_por BIGINT UNSIGNED NULL,
+
+    /* Sirve para enlazar mantenimientos recurrentes */
+    mantenimiento_origen_id BIGINT UNSIGNED NULL,
+
+    servicio VARCHAR(150) NOT NULL,
+    observaciones TEXT NULL,
+
+    fecha_objetivo DATE NULL,
+    kilometraje_objetivo DECIMAL(12,1) NULL,
+
+    estado ENUM(
+        'PENDIENTE',
+        'PROXIMO',
+        'VENCIDO',
+        'REALIZADO'
+    ) NOT NULL DEFAULT 'PENDIENTE',
+
+    fecha_realizacion DATE NULL,
+    kilometraje_realizacion DECIMAL(12,1) NULL,
+
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    fecha_actualizacion DATETIME NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_mantenimiento_vehiculo
+        FOREIGN KEY (vehiculo_id)
+        REFERENCES vehiculo(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_mantenimiento_usuario
+        FOREIGN KEY (creado_por)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_mantenimiento_origen
+        FOREIGN KEY (mantenimiento_origen_id)
+        REFERENCES mantenimiento(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT chk_mantenimiento_objetivo
+        CHECK (
+            fecha_objetivo IS NOT NULL
+            OR kilometraje_objetivo IS NOT NULL
+        ),
+
+    CONSTRAINT chk_mantenimiento_km_objetivo
+        CHECK (
+            kilometraje_objetivo IS NULL
+            OR kilometraje_objetivo >= 0
+        ),
+
+    CONSTRAINT chk_mantenimiento_km_realizacion
+        CHECK (
+            kilometraje_realizacion IS NULL
+            OR kilometraje_realizacion >= 0
+        )
+);
+
+CREATE INDEX idx_mantenimiento_vehiculo
+    ON mantenimiento(vehiculo_id);
+
+CREATE INDEX idx_mantenimiento_estado
+    ON mantenimiento(estado);
+
+CREATE INDEX idx_mantenimiento_fecha
+    ON mantenimiento(fecha_objetivo);
+
+CREATE INDEX idx_mantenimiento_km
+    ON mantenimiento(kilometraje_objetivo);
+
+CREATE INDEX idx_mantenimiento_vehiculo_estado
+    ON mantenimiento(vehiculo_id, estado);
+
+
+
+/* ============================================================
+   9. RECURRENCIA DE MANTENIMIENTO
+   Relacion 1 : 0..1
+   ============================================================ */
+
+CREATE TABLE recurrencia_mantenimiento (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    mantenimiento_id BIGINT UNSIGNED NOT NULL,
+
+    tipo ENUM(
+        'TIEMPO',
+        'KILOMETRAJE',
+        'AMBOS'
+    ) NOT NULL,
+
+    intervalo_meses INT UNSIGNED NULL,
+    intervalo_kilometros DECIMAL(12,1) NULL,
+
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    fecha_actualizacion DATETIME NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_recurrencia_mantenimiento
+        UNIQUE (mantenimiento_id),
+
+    CONSTRAINT fk_recurrencia_mantenimiento
+        FOREIGN KEY (mantenimiento_id)
+        REFERENCES mantenimiento(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT chk_recurrencia_intervalos
+        CHECK (
+            (
+                tipo = 'TIEMPO'
+                AND intervalo_meses IS NOT NULL
+                AND intervalo_meses > 0
+            )
+            OR
+            (
+                tipo = 'KILOMETRAJE'
+                AND intervalo_kilometros IS NOT NULL
+                AND intervalo_kilometros > 0
+            )
+            OR
+            (
+                tipo = 'AMBOS'
+                AND intervalo_meses IS NOT NULL
+                AND intervalo_meses > 0
+                AND intervalo_kilometros IS NOT NULL
+                AND intervalo_kilometros > 0
+            )
+        )
+);
+
+
+
+/* ============================================================
+   10. RECORDATORIOS DE MANTENIMIENTO
+   ============================================================ */
+
+CREATE TABLE recordatorio_mantenimiento (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    mantenimiento_id BIGINT UNSIGNED NOT NULL,
+
+    dias_anticipacion INT UNSIGNED NULL DEFAULT 15,
+    kilometros_anticipacion DECIMAL(12,1) NULL DEFAULT 500,
+
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    fecha_actualizacion DATETIME NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_recordatorio_mantenimiento
+        UNIQUE (mantenimiento_id),
+
+    CONSTRAINT fk_recordatorio_mantenimiento
+        FOREIGN KEY (mantenimiento_id)
+        REFERENCES mantenimiento(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT chk_recordatorio_valores
+        CHECK (
+            (
+                dias_anticipacion IS NOT NULL
+                AND dias_anticipacion >= 0
+            )
+            OR
+            (
+                kilometros_anticipacion IS NOT NULL
+                AND kilometros_anticipacion >= 0
+            )
+        )
+);
+
+
+
+/* ============================================================
+   11. HISTORIAL DE REPROGRAMACIONES
+   ============================================================ */
+
+CREATE TABLE historial_reprogramacion (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    mantenimiento_id BIGINT UNSIGNED NOT NULL,
+    realizado_por BIGINT UNSIGNED NULL,
+
+    fecha_objetivo_anterior DATE NULL,
+    fecha_objetivo_nueva DATE NULL,
+
+    kilometraje_objetivo_anterior DECIMAL(12,1) NULL,
+    kilometraje_objetivo_nuevo DECIMAL(12,1) NULL,
+
+    motivo VARCHAR(500) NULL,
+
+    fecha_reprogramacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_reprogramacion_mantenimiento
+        FOREIGN KEY (mantenimiento_id)
+        REFERENCES mantenimiento(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_reprogramacion_usuario
+        FOREIGN KEY (realizado_por)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+CREATE INDEX idx_reprogramacion_mantenimiento
+    ON historial_reprogramacion(mantenimiento_id);
+
+
+
+/* ============================================================
+   12. PROYECCION DEL MANTENIMIENTO
+   ============================================================ */
+
+CREATE TABLE proyeccion_mantenimiento (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    mantenimiento_id BIGINT UNSIGNED NOT NULL,
+
+    promedio_km_dia DECIMAL(12,2) NOT NULL,
+
+    kilometros_restantes DECIMAL(12,1) NOT NULL,
+
+    dias_estimados INT UNSIGNED NULL,
+
+    fecha_estimada DATE NULL,
+
+    fecha_calculo DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_proyeccion_mantenimiento
+        UNIQUE (mantenimiento_id),
+
+    CONSTRAINT fk_proyeccion_mantenimiento
+        FOREIGN KEY (mantenimiento_id)
+        REFERENCES mantenimiento(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT chk_proyeccion_promedio
+        CHECK (promedio_km_dia >= 0)
+);
+
+
+
+/* ============================================================
+   13. ALERTAS Y NOTIFICACIONES
+   ============================================================ */
+
+CREATE TABLE alerta (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    usuario_id BIGINT UNSIGNED NOT NULL,
+
+    mantenimiento_id BIGINT UNSIGNED NULL,
+    documento_id BIGINT UNSIGNED NULL,
+
+    tipo ENUM(
+        'MANTENIMIENTO_PROXIMO',
+        'MANTENIMIENTO_VENCIDO',
+        'DOCUMENTO_PROXIMO',
+        'DOCUMENTO_VENCIDO'
+    ) NOT NULL,
+
+    motivo VARCHAR(500) NOT NULL,
+
+    fecha_generada DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    leida BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_lectura DATETIME NULL,
+
+    push_enviado BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_push DATETIME NULL,
+
+    CONSTRAINT fk_alerta_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_alerta_mantenimiento
+        FOREIGN KEY (mantenimiento_id)
+        REFERENCES mantenimiento(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_alerta_documento
+        FOREIGN KEY (documento_id)
+        REFERENCES documento_vehiculo(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_alerta_usuario
+    ON alerta(usuario_id);
+
+CREATE INDEX idx_alerta_usuario_leida
+    ON alerta(usuario_id, leida);
+
+CREATE INDEX idx_alerta_fecha
+    ON alerta(fecha_generada DESC);
+
+
+/* ============================================================
+   14. CATALOGO DE CATEGORIAS DE GASTO
+   ============================================================ */
+
+CREATE TABLE categoria_gasto (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    codigo VARCHAR(50) NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(255) NULL,
+
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT uq_categoria_codigo
+        UNIQUE (codigo),
+
+    CONSTRAINT uq_categoria_nombre
+        UNIQUE (nombre)
+);
+
+
+
+/* ============================================================
+   15. GASTOS
+   ============================================================ */
+
+CREATE TABLE gasto (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    vehiculo_id BIGINT UNSIGNED NOT NULL,
+    categoria_id BIGINT UNSIGNED NOT NULL,
+
+    registrado_por BIGINT UNSIGNED NULL,
+
+    monto DECIMAL(14,2) NOT NULL,
+
+    moneda CHAR(3) NOT NULL DEFAULT 'USD',
+
+    fecha DATE NOT NULL,
+
+    descripcion TEXT NULL,
+
+    numero_comprobante VARCHAR(100) NULL,
+    proveedor VARCHAR(150) NULL,
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    fecha_actualizacion DATETIME NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_gasto_vehiculo
+        FOREIGN KEY (vehiculo_id)
+        REFERENCES vehiculo(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_gasto_categoria
+        FOREIGN KEY (categoria_id)
+        REFERENCES categoria_gasto(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_gasto_usuario
+        FOREIGN KEY (registrado_por)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT chk_gasto_monto
+        CHECK (monto > 0)
+);
+
+CREATE INDEX idx_gasto_vehiculo
+    ON gasto(vehiculo_id);
+
+CREATE INDEX idx_gasto_categoria
+    ON gasto(categoria_id);
+
+CREATE INDEX idx_gasto_fecha
+    ON gasto(fecha DESC);
+
+CREATE INDEX idx_gasto_vehiculo_fecha
+    ON gasto(vehiculo_id, fecha DESC);
+
+
+
+/* ============================================================
+   16. COMPROBANTE DEL GASTO
+   Relacion 1 : 0..1 según el modelo actual
+   ============================================================ */
+
+CREATE TABLE comprobante_gasto (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    gasto_id BIGINT UNSIGNED NOT NULL,
+
+    nombre_archivo VARCHAR(255) NOT NULL,
+    tipo_archivo VARCHAR(100) NOT NULL,
+
+    ruta_archivo VARCHAR(500) NOT NULL,
+
+    tamanio_bytes BIGINT UNSIGNED NULL,
+
+    fecha_adjunto DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_comprobante_gasto
+        UNIQUE (gasto_id),
+
+    CONSTRAINT fk_comprobante_gasto
+        FOREIGN KEY (gasto_id)
+        REFERENCES gasto(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+
+
+/* ============================================================
+   17. REPORTES DE GASTOS
+   ============================================================ */
+
+CREATE TABLE reporte_gasto (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    usuario_id BIGINT UNSIGNED NOT NULL,
+
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+
+    total DECIMAL(14,2) NOT NULL DEFAULT 0,
+
+    moneda CHAR(3) NOT NULL DEFAULT 'USD',
+
+    estado ENUM(
+        'GENERANDO',
+        'GENERADO',
+        'ERROR'
+    ) NOT NULL DEFAULT 'GENERANDO',
+
+    nombre_archivo VARCHAR(255) NULL,
+    ruta_archivo VARCHAR(500) NULL,
+
+    fecha_generacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_reporte_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuario(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_reporte_fechas
+        CHECK (fecha_fin >= fecha_inicio),
+
+    CONSTRAINT chk_reporte_total
+        CHECK (total >= 0)
+);
+
+CREATE INDEX idx_reporte_usuario
+    ON reporte_gasto(usuario_id);
+
+CREATE INDEX idx_reporte_fecha
+    ON reporte_gasto(fecha_generacion DESC);
+
+
+
+/* ============================================================
+   18. DETALLE DEL REPORTE
+   Mantiene una fotografía histórica del reporte generado
+   ============================================================ */
+
+CREATE TABLE reporte_gasto_detalle (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    reporte_id BIGINT UNSIGNED NOT NULL,
+    gasto_id BIGINT UNSIGNED NOT NULL,
+
+    /* Snapshot */
+    vehiculo_placa VARCHAR(20) NOT NULL,
+    categoria_nombre VARCHAR(100) NOT NULL,
+
+    descripcion TEXT NULL,
+
+    fecha_gasto DATE NOT NULL,
+
+    monto DECIMAL(14,2) NOT NULL,
+    moneda CHAR(3) NOT NULL DEFAULT 'USD',
+
+    CONSTRAINT uq_reporte_gasto
+        UNIQUE (reporte_id, gasto_id),
+
+    CONSTRAINT fk_detalle_reporte
+        FOREIGN KEY (reporte_id)
+        REFERENCES reporte_gasto(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_detalle_gasto
+        FOREIGN KEY (gasto_id)
+        REFERENCES gasto(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_reporte_detalle_monto
+        CHECK (monto > 0)
+);
+
+CREATE INDEX idx_reporte_detalle_reporte
+    ON reporte_gasto_detalle(reporte_id);
+
+
+
+/* ============================================================
+   DATOS INICIALES
+   CATEGORIAS DE GASTO
+   ============================================================ */
+
+INSERT INTO categoria_gasto
+    (codigo, nombre, descripcion)
+VALUES
+    (
+        'MANTENIMIENTO',
+        'Mantenimiento',
+        'Servicios preventivos o correctivos del vehículo'
+    ),
+    (
+        'REPUESTOS',
+        'Repuestos',
+        'Compra de piezas y repuestos'
+    ),
+    (
+        'SEGURO_TRAMITE',
+        'Seguro / Trámite',
+        'Seguros, revisión técnica y trámites relacionados'
+    ),
+    (
+        'COMBUSTIBLE',
+        'Combustible',
+        'Gastos de combustible'
+    ),
+    (
+        'ESTACIONAMIENTO',
+        'Estacionamiento',
+        'Parqueos y estacionamientos'
+    ),
+    (
+        'LAVADO_OTROS',
+        'Lavado y otros',
+        'Limpieza y otros gastos menores'
+    ),
+    (
+        'OTRO',
+        'Otro',
+        'Gastos no clasificados en otras categorías'
+    );
+
+
+
+/* ============================================================
+   TRIGGERS
+   ============================================================ */
+
+DELIMITER $$
+
+
+/* ------------------------------------------------------------
+   Impedir registrar un kilometraje inferior al actual
+   ------------------------------------------------------------ */
+
+CREATE TRIGGER trg_registro_kilometraje_before_insert
+BEFORE INSERT ON registro_kilometraje
+FOR EACH ROW
+BEGIN
+
+    DECLARE v_kilometraje_actual DECIMAL(12,1);
+
+    SELECT kilometraje_actual
+    INTO v_kilometraje_actual
+    FROM vehiculo
+    WHERE id = NEW.vehiculo_id;
+
+    IF v_kilometraje_actual IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El vehículo indicado no existe.';
+    END IF;
+
+    IF NEW.kilometraje < v_kilometraje_actual THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+            'El kilometraje no puede ser menor al kilometraje actual del vehículo.';
+    END IF;
+
+END$$
+
+
+
+/* ------------------------------------------------------------
+   Actualizar kilometraje actual del vehículo
+   al registrar una nueva lectura
+   ------------------------------------------------------------ */
+
+CREATE TRIGGER trg_registro_kilometraje_after_insert
+AFTER INSERT ON registro_kilometraje
+FOR EACH ROW
+BEGIN
+
+    UPDATE vehiculo
+    SET kilometraje_actual = NEW.kilometraje
+    WHERE id = NEW.vehiculo_id;
+
+END$$
+
+
+
+/* ------------------------------------------------------------
+   Validar origen y tipo de alerta al insertar
+   ------------------------------------------------------------ */
+
+CREATE TRIGGER trg_alerta_before_insert
+BEFORE INSERT ON alerta
+FOR EACH ROW
+BEGIN
+
+    /* Debe existir exactamente un origen */
+    IF (
+        NEW.mantenimiento_id IS NULL
+        AND NEW.documento_id IS NULL
+    )
+    OR (
+        NEW.mantenimiento_id IS NOT NULL
+        AND NEW.documento_id IS NOT NULL
+    ) THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+            'La alerta debe estar asociada a un mantenimiento o a un documento, pero no a ambos.';
+
+    END IF;
+
+    /* Validar que el tipo coincida con el origen */
+    IF NEW.mantenimiento_id IS NOT NULL
+       AND NEW.tipo NOT IN (
+           'MANTENIMIENTO_PROXIMO',
+           'MANTENIMIENTO_VENCIDO'
+       ) THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+            'El tipo de alerta no corresponde a un mantenimiento.';
+
+    END IF;
+
+    IF NEW.documento_id IS NOT NULL
+       AND NEW.tipo NOT IN (
+           'DOCUMENTO_PROXIMO',
+           'DOCUMENTO_VENCIDO'
+       ) THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+            'El tipo de alerta no corresponde a un documento.';
+
+    END IF;
+
+END$$
+
+
+/* ------------------------------------------------------------
+   Validar alerta al actualizar y marcar fecha de lectura
+   ------------------------------------------------------------ */
+
+CREATE TRIGGER trg_alerta_before_update
+BEFORE UPDATE ON alerta
+FOR EACH ROW
+BEGIN
+
+    /* Debe existir exactamente un origen */
+    IF (
+        NEW.mantenimiento_id IS NULL
+        AND NEW.documento_id IS NULL
+    )
+    OR (
+        NEW.mantenimiento_id IS NOT NULL
+        AND NEW.documento_id IS NOT NULL
+    ) THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+            'La alerta debe estar asociada a un mantenimiento o a un documento, pero no a ambos.';
+
+    END IF;
+
+    /* Validar que el tipo coincida con el origen */
+    IF NEW.mantenimiento_id IS NOT NULL
+       AND NEW.tipo NOT IN (
+           'MANTENIMIENTO_PROXIMO',
+           'MANTENIMIENTO_VENCIDO'
+       ) THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+            'El tipo de alerta no corresponde a un mantenimiento.';
+
+    END IF;
+
+    IF NEW.documento_id IS NOT NULL
+       AND NEW.tipo NOT IN (
+           'DOCUMENTO_PROXIMO',
+           'DOCUMENTO_VENCIDO'
+       ) THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+            'El tipo de alerta no corresponde a un documento.';
+
+    END IF;
+
+    /* Registrar automáticamente cuándo pasa de no leída a leída */
+    IF NEW.leida = TRUE
+       AND OLD.leida = FALSE
+       AND NEW.fecha_lectura IS NULL THEN
+
+        SET NEW.fecha_lectura = CURRENT_TIMESTAMP;
+
+    END IF;
+
+    /* Si vuelve a marcarse como no leída, limpiar la fecha */
+    IF NEW.leida = FALSE
+       AND OLD.leida = TRUE THEN
+
+        SET NEW.fecha_lectura = NULL;
+
+    END IF;
+
+END$$
+
+
+DELIMITER ;
+
+
+
+/* ============================================================
+   VISTAS
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   Vista general de vehículos
+   ------------------------------------------------------------ */
+
+CREATE OR REPLACE VIEW vw_vehiculos_detalle AS
+SELECT
+    v.id,
+    v.marca,
+    v.modelo,
+    v.anio,
+    v.placa,
+    v.color,
+    v.kilometraje_actual,
+    v.vin,
+    v.motor,
+    v.estado,
+
+    u.id AS propietario_id,
+    u.nombre_completo AS propietario,
+    u.correo AS propietario_correo
+
+FROM vehiculo v
+
+INNER JOIN usuario u
+    ON u.id = v.propietario_id;
+
+
+
+/* ------------------------------------------------------------
+   Vista resumen de mantenimientos
+   ------------------------------------------------------------ */
+
+CREATE OR REPLACE VIEW vw_mantenimientos_resumen AS
+SELECT
+    m.id AS mantenimiento_id,
+
+    v.id AS vehiculo_id,
+    v.placa,
+    v.marca,
+    v.modelo,
+    v.kilometraje_actual,
+
+    m.servicio,
+    m.fecha_objetivo,
+    m.kilometraje_objetivo,
+    m.estado,
+
+    CASE
+        WHEN m.kilometraje_objetivo IS NOT NULL
+        THEN m.kilometraje_objetivo - v.kilometraje_actual
+        ELSE NULL
+    END AS kilometros_restantes,
+
+    CASE
+        WHEN m.fecha_objetivo IS NOT NULL
+        THEN DATEDIFF(
+            m.fecha_objetivo,
+            CURRENT_DATE
+        )
+        ELSE NULL
+    END AS dias_restantes
+
+FROM mantenimiento m
+
+INNER JOIN vehiculo v
+    ON v.id = m.vehiculo_id;
+
+
+
+/* ------------------------------------------------------------
+   Vista completa de gastos
+   ------------------------------------------------------------ */
+
+CREATE OR REPLACE VIEW vw_gastos_detalle AS
+SELECT
+    g.id AS gasto_id,
+
+    g.fecha,
+    g.monto,
+    g.moneda,
+    g.descripcion,
+    g.numero_comprobante,
+    g.proveedor,
+
+    c.id AS categoria_id,
+    c.nombre AS categoria,
+
+    v.id AS vehiculo_id,
+    v.placa,
+    v.marca,
+    v.modelo,
+
+    u.id AS propietario_id,
+    u.nombre_completo AS propietario
+
+FROM gasto g
+
+INNER JOIN categoria_gasto c
+    ON c.id = g.categoria_id
+
+INNER JOIN vehiculo v
+    ON v.id = g.vehiculo_id
+
+INNER JOIN usuario u
+    ON u.id = v.propietario_id;
+
+
+
+/* ------------------------------------------------------------
+   Vista de estadísticas por categoría
+   ------------------------------------------------------------ */
+
+CREATE OR REPLACE VIEW vw_gastos_por_categoria AS
+SELECT
+    g.vehiculo_id,
+    c.id AS categoria_id,
+    c.nombre AS categoria,
+
+    COUNT(*) AS cantidad_gastos,
+
+    SUM(g.monto) AS total_gastado
+
+FROM gasto g
+
+INNER JOIN categoria_gasto c
+    ON c.id = g.categoria_id
+
+GROUP BY
+    g.vehiculo_id,
+    c.id,
+    c.nombre;
+
+
+
+/* ------------------------------------------------------------
+   Vista de estadísticas por vehículo
+   ------------------------------------------------------------ */
+
+CREATE OR REPLACE VIEW vw_gastos_por_vehiculo AS
+SELECT
+    v.id AS vehiculo_id,
+    v.placa,
+    v.marca,
+    v.modelo,
+
+    COUNT(g.id) AS cantidad_gastos,
+
+    COALESCE(
+        SUM(g.monto),
+        0
+    ) AS total_gastado
+
+FROM vehiculo v
+
+LEFT JOIN gasto g
+    ON g.vehiculo_id = v.id
+
+GROUP BY
+    v.id,
+    v.placa,
+    v.marca,
+    v.modelo;
+
+
+
+/* ============================================================
+   FIN DEL SCRIPT
+   ============================================================ */
+
+
+
+SHOW TABLES;
+SHOW TRIGGERS;

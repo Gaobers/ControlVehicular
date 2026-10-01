@@ -1,0 +1,455 @@
+@startuml
+
+' =========================================================
+' CONFIGURACION GENERAL
+' =========================================================
+
+left to right direction
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+skinparam class {
+    BackgroundColor #FFFFFF
+    BorderColor #334155
+    ArrowColor #475569
+    FontColor #0F172A
+    FontSize 12
+    AttributeFontSize 11
+}
+
+skinparam package {
+    BackgroundColor #F8FAFC
+    BorderColor #94A3B8
+    FontColor #0F172A
+}
+
+skinparam enum {
+    BackgroundColor #F1F5F9
+    BorderColor #64748B
+    FontColor #0F172A
+}
+
+hide empty members
+
+
+' =========================================================
+' USUARIOS Y VEHICULOS
+' =========================================================
+
+package "Usuarios y Vehiculos" {
+
+    class Usuario {
+        - id: int
+        - nombreCompleto: String
+        - correo: String
+        - contrasena: String
+        - telefono: String
+        - rol: RolUsuario
+        - estado: EstadoUsuario
+        - fechaRegistro: datetime
+        --
+        + obtenerTodos(): List<Usuario>
+        + obtenerPorId(id: int): Optional<Usuario>
+        + guardar(u: Usuario): Usuario
+        + eliminar(id: int): void
+        + obtenerTodosPaginados(pageable: Pageable): Page<Usuario>
+        + buscarPorNombreOCorreo(valor: String): List<Usuario>
+        + cambiarContrasena(nuevaContrasena: String): boolean
+        + activar(): void
+        + desactivar(): void
+        + validarAcceso(): boolean
+    }
+
+
+    class Vehiculo {
+        - id: int
+        - propietario: Usuario
+        - marca: String
+        - modelo: String
+        - anio: int
+        - placa: String
+        - color: String
+        - kilometrajeActual: double
+        - vin: String
+        - motor: String
+        - estado: EstadoVehiculo
+        - fechaRegistro: datetime
+        --
+        + obtenerTodos(): List<Vehiculo>
+        + obtenerPorId(id: int): Optional<Vehiculo>
+        + guardar(v: Vehiculo): Vehiculo
+        + eliminar(id: int): void
+        + obtenerTodosPaginados(pageable: Pageable): Page<Vehiculo>
+        + buscarPorPlaca(placa: String): Optional<Vehiculo>
+        + obtenerPorPropietario(idUsuario: int): List<Vehiculo>
+        + actualizarKilometraje(km: double): void
+        + archivar(): void
+        + validarPlaca(): boolean
+    }
+
+
+    class RegistroKilometraje {
+        - id: int
+        - vehiculo: Vehiculo
+        - kilometraje: double
+        - fechaHora: datetime
+        --
+        + obtenerTodos(): List<RegistroKilometraje>
+        + obtenerPorId(id: int): Optional<RegistroKilometraje>
+        + guardar(r: RegistroKilometraje): RegistroKilometraje
+        + eliminar(id: int): void
+        + obtenerPorVehiculo(idVehiculo: int): List<RegistroKilometraje>
+        + obtenerUltimoRegistro(idVehiculo: int): Optional<RegistroKilometraje>
+        + validarKilometrajeAnterior(): boolean
+    }
+
+
+    class DocumentoVehiculo {
+        - id: int
+        - vehiculo: Vehiculo
+        - tipo: TipoDocumento
+        - descripcion: String
+        - numeroDocumento: String
+        - fechaVencimiento: date
+        - fechaActualizacion: datetime
+        --
+        + obtenerTodos(): List<DocumentoVehiculo>
+        + obtenerPorId(id: int): Optional<DocumentoVehiculo>
+        + guardar(d: DocumentoVehiculo): DocumentoVehiculo
+        + eliminar(id: int): void
+        + obtenerPorVehiculo(idVehiculo: int): List<DocumentoVehiculo>
+        + verificarVencimiento(): boolean
+        + verificarProximidad(): boolean
+    }
+}
+
+
+' =========================================================
+' MANTENIMIENTOS Y ALERTAS
+' =========================================================
+
+package "Mantenimientos y Alertas" {
+
+    class Mantenimiento {
+        - id: int
+        - vehiculo: Vehiculo
+        - servicio: String
+        - observaciones: String
+        - fechaObjetivo: date
+        - kilometrajeObjetivo: double
+        - estado: EstadoMantenimiento
+        - fechaCreacion: datetime
+        - fechaRealizacion: date
+        - kilometrajeRealizacion: double
+        --
+        + obtenerTodos(): List<Mantenimiento>
+        + obtenerPorId(id: int): Optional<Mantenimiento>
+        + guardar(m: Mantenimiento): Mantenimiento
+        + eliminar(id: int): void
+        + obtenerTodosPaginados(pageable: Pageable): Page<Mantenimiento>
+        + obtenerPorVehiculo(idVehiculo: int): List<Mantenimiento>
+        + filtrarPorEstado(estado: EstadoMantenimiento): List<Mantenimiento>
+        + calcularEstado(): EstadoMantenimiento
+        + marcarComoRealizado(fecha: date, kilometraje: double): void
+        + reprogramar(fecha: date, kilometraje: double): void
+    }
+
+
+    class RecurrenciaMantenimiento {
+        - id: int
+        - mantenimiento: Mantenimiento
+        - tipo: TipoRecurrencia
+        - intervaloMeses: int
+        - intervaloKilometros: double
+        - activa: boolean
+        --
+        + obtenerTodos(): List<RecurrenciaMantenimiento>
+        + obtenerPorId(id: int): Optional<RecurrenciaMantenimiento>
+        + guardar(r: RecurrenciaMantenimiento): RecurrenciaMantenimiento
+        + eliminar(id: int): void
+        + calcularSiguienteFecha(fechaBase: date): date
+        + calcularSiguienteKilometraje(kmBase: double): double
+        + activar(): void
+        + desactivar(): void
+    }
+
+
+    class RecordatorioMantenimiento {
+        - id: int
+        - mantenimiento: Mantenimiento
+        - diasAnticipacion: int
+        - kilometrosAnticipacion: double
+        - activo: boolean
+        --
+        + obtenerTodos(): List<RecordatorioMantenimiento>
+        + obtenerPorId(id: int): Optional<RecordatorioMantenimiento>
+        + guardar(r: RecordatorioMantenimiento): RecordatorioMantenimiento
+        + eliminar(id: int): void
+        + verificarPorFecha(fechaActual: date): boolean
+        + verificarPorKilometraje(kmActual: double): boolean
+        + activar(): void
+        + desactivar(): void
+    }
+
+
+    class Alerta {
+        - id: int
+        - usuario: Usuario
+        - mantenimiento: Mantenimiento
+        - documento: DocumentoVehiculo
+        - tipo: TipoAlerta
+        - motivo: String
+        - fechaGenerada: datetime
+        - leida: boolean
+        --
+        + obtenerTodos(): List<Alerta>
+        + obtenerPorId(id: int): Optional<Alerta>
+        + guardar(a: Alerta): Alerta
+        + eliminar(id: int): void
+        + obtenerPorUsuario(idUsuario: int): List<Alerta>
+        + obtenerNoLeidas(idUsuario: int): List<Alerta>
+        + marcarComoLeida(): void
+        + enviarNotificacion(): boolean
+    }
+
+
+    class ProyeccionMantenimiento {
+        - id: int
+        - mantenimiento: Mantenimiento
+        - promedioKmDia: double
+        - kilometrosRestantes: double
+        - diasEstimados: int
+        - fechaEstimada: date
+        - fechaCalculo: datetime
+        --
+        + obtenerPorMantenimiento(idMantenimiento: int): Optional<ProyeccionMantenimiento>
+        + calcularPromedioKmDia(): double
+        + calcularKilometrosRestantes(): double
+        + calcularDiasEstimados(): int
+        + calcularFechaEstimada(): date
+        + recalcular(): ProyeccionMantenimiento
+    }
+}
+
+
+' =========================================================
+' GASTOS Y REPORTES
+' =========================================================
+
+package "Gastos y Reportes" {
+
+    class Gasto {
+        - id: int
+        - vehiculo: Vehiculo
+        - categoria: String
+        - monto: double
+        - fecha: date
+        - descripcion: String
+        - fechaRegistro: datetime
+        --
+        + obtenerTodos(): List<Gasto>
+        + obtenerPorId(id: int): Optional<Gasto>
+        + guardar(g: Gasto): Gasto
+        + eliminar(id: int): void
+        + obtenerTodosPaginados(pageable: Pageable): Page<Gasto>
+        + obtenerPorVehiculo(idVehiculo: int): List<Gasto>
+        + filtrarPorPeriodo(fechaInicio: date, fechaFin: date): List<Gasto>
+        + filtrarPorCategoria(categoria: String): List<Gasto>
+        + calcularTotal(): double
+        + validarMonto(): boolean
+    }
+
+
+    class ComprobanteGasto {
+        - id: int
+        - gasto: Gasto
+        - nombreArchivo: String
+        - tipoArchivo: String
+        - rutaArchivo: String
+        - fechaAdjunto: datetime
+        --
+        + obtenerTodos(): List<ComprobanteGasto>
+        + obtenerPorId(id: int): Optional<ComprobanteGasto>
+        + guardar(c: ComprobanteGasto): ComprobanteGasto
+        + eliminar(id: int): void
+        + obtenerPorGasto(idGasto: int): Optional<ComprobanteGasto>
+        + validarArchivo(): boolean
+        + descargar(): void
+        + compartir(): void
+    }
+
+
+    class ReporteGasto {
+        - id: int
+        - usuario: Usuario
+        - fechaInicio: date
+        - fechaFin: date
+        - total: double
+        - fechaGeneracion: datetime
+        - rutaArchivo: String
+        --
+        + obtenerTodos(): List<ReporteGasto>
+        + obtenerPorId(id: int): Optional<ReporteGasto>
+        + generar(fechaInicio: date, fechaFin: date): ReporteGasto
+        + calcularTotal(): double
+        + generarPDF(): void
+        + descargar(): void
+        + compartir(): void
+    }
+}
+
+
+' =========================================================
+' ENUMERACIONES
+' =========================================================
+
+package "Enumeraciones" {
+
+    enum RolUsuario {
+        CLIENTE
+        ADMINISTRADOR
+    }
+
+    enum EstadoUsuario {
+        ACTIVO
+        DESACTIVADO
+    }
+
+    enum EstadoVehiculo {
+        ACTIVO
+        ARCHIVADO
+    }
+
+    enum EstadoMantenimiento {
+        PENDIENTE
+        PROXIMO
+        VENCIDO
+        REALIZADO
+    }
+
+    enum TipoRecurrencia {
+        TIEMPO
+        KILOMETRAJE
+        AMBOS
+    }
+
+    enum TipoDocumento {
+        SEGURO
+        REVISION_TECNICA
+        OTRO
+    }
+
+    enum TipoAlerta {
+        MANTENIMIENTO_PROXIMO
+        MANTENIMIENTO_VENCIDO
+        DOCUMENTO_PROXIMO
+        DOCUMENTO_VENCIDO
+    }
+}
+
+
+' =========================================================
+' RELACIONES PRINCIPALES
+' =========================================================
+
+Usuario "1" -- "0..*" Vehiculo : posee >
+
+Vehiculo "1" -- "0..*" RegistroKilometraje : registra >
+Vehiculo "1" -- "0..*" DocumentoVehiculo : posee >
+Vehiculo "1" -- "0..*" Mantenimiento : posee >
+Vehiculo "1" -- "0..*" Gasto : genera >
+
+Mantenimiento "1" -- "0..1" RecurrenciaMantenimiento : configura >
+Mantenimiento "1" -- "0..1" RecordatorioMantenimiento : configura >
+Mantenimiento "1" -- "0..*" Alerta : genera >
+Mantenimiento "1" -- "0..1" ProyeccionMantenimiento : proyecta >
+
+Usuario "1" -- "0..*" Alerta : recibe >
+
+DocumentoVehiculo "1" -- "0..*" Alerta : genera >
+
+Gasto "1" -- "0..1" ComprobanteGasto : adjunta >
+
+Usuario "1" -- "0..*" ReporteGasto : genera >
+
+
+' =========================================================
+' RELACIONES CON ENUMS
+' =========================================================
+
+Usuario ..> RolUsuario : rol
+Usuario ..> EstadoUsuario : estado
+
+Vehiculo ..> EstadoVehiculo : estado
+
+DocumentoVehiculo ..> TipoDocumento : tipo
+
+Mantenimiento ..> EstadoMantenimiento : estado
+
+RecurrenciaMantenimiento ..> TipoRecurrencia : tipo
+
+Alerta ..> TipoAlerta : tipo
+
+
+' =========================================================
+' ORDEN VISUAL
+' =========================================================
+
+' Columna Usuarios / Vehiculos
+Usuario -[hidden]down- Vehiculo
+Vehiculo -[hidden]down- RegistroKilometraje
+RegistroKilometraje -[hidden]down- DocumentoVehiculo
+
+' Columna Mantenimientos
+Mantenimiento -[hidden]down- RecurrenciaMantenimiento
+RecurrenciaMantenimiento -[hidden]down- RecordatorioMantenimiento
+RecordatorioMantenimiento -[hidden]down- Alerta
+Alerta -[hidden]down- ProyeccionMantenimiento
+
+' Columna Gastos
+Gasto -[hidden]down- ComprobanteGasto
+ComprobanteGasto -[hidden]down- ReporteGasto
+
+' Columna de Enumeraciones
+RolUsuario -[hidden]down- EstadoUsuario
+EstadoUsuario -[hidden]down- EstadoVehiculo
+EstadoVehiculo -[hidden]down- EstadoMantenimiento
+EstadoMantenimiento -[hidden]down- TipoRecurrencia
+TipoRecurrencia -[hidden]down- TipoDocumento
+TipoDocumento -[hidden]down- TipoAlerta
+
+' Separacion horizontal de los grandes grupos
+Usuario -[hidden]right- Mantenimiento
+Mantenimiento -[hidden]right- Gasto
+Gasto -[hidden]right- RolUsuario
+
+
+' =========================================================
+' NOTAS IMPORTANTES
+' =========================================================
+
+note bottom of Usuario
+El usuario puede tener rol
+CLIENTE o ADMINISTRADOR.
+
+Solo el Cliente actua como
+propietario de vehiculos.
+end note
+
+note bottom of Alerta
+Una alerta puede originarse
+por un mantenimiento o por
+un documento del vehiculo.
+end note
+
+note bottom of Mantenimiento
+fechaObjetivo y kilometrajeObjetivo
+pueden utilizarse individualmente
+o en conjunto.
+end note
+
+@enduml
