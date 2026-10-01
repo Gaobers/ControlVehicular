@@ -1,21 +1,17 @@
 package org.esfe.dtos;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
-@Schema(description = "Respuesta genérica de la API")
+@AllArgsConstructor
 public class RespuestaDTO<T> {
-    @Schema(description = "Indica si la operación fue exitosa", example = "true")
-    private Boolean exito;
-    
-    @Schema(description = "Mensaje descriptivo del resultado", example = "Operación completada")
+
+    private boolean exito;
     private String mensaje;
-    
-    @Schema(description = "Datos de respuesta (tipo variable según endpoint)")
     private T datos;
 }
