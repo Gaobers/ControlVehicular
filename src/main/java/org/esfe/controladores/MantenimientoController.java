@@ -1,85 +1,220 @@
 package org.esfe.controladores;
 
+import jakarta.validation.Valid;
+
 import org.esfe.dtos.mantenimiento.MantenimientoGuardarDTO;
 import org.esfe.dtos.mantenimiento.MantenimientoModificarDTO;
 import org.esfe.dtos.mantenimiento.MantenimientoSalidaDTO;
+
 import org.esfe.enums.EstadoMantenimiento;
+
 import org.esfe.servicio.interfaces.IMantenimientoService;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus; // <- Importante agregarlo
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import org.springframework.http.ResponseEntity;
+
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
+
 
 @RestController
 @RequestMapping("/api/mantenimientos")
-@CrossOrigin(origins = "*") // Permite peticiones sin bloqueo CORS/Security básico
 public class MantenimientoController {
+
 
     @Autowired
     private IMantenimientoService mantenimientoService;
 
+
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
+    @GetMapping
+    public ResponseEntity<Page<MantenimientoSalidaDTO>>
+    mostrarTodosPaginados(
+
+            @RequestParam(required = false)
+            Long vehiculoId,
+
+            @RequestParam(required = false)
+            EstadoMantenimiento estado,
+
+            @RequestParam(required = false)
+            Boolean activo,
+
+            Pageable pageable
+    ) {
+
+        Page<MantenimientoSalidaDTO> mantenimientos =
+                mantenimientoService
+                        .obtenerTodosPaginados(
+                                vehiculoId,
+                                estado,
+                                activo,
+                                pageable
+                        );
+
+
+        if (mantenimientos.hasContent()) {
+
+            return ResponseEntity.ok(
+                    mantenimientos
+            );
+        }
+
+
+        return ResponseEntity
+                .notFound()
+                .build();
+    }
+
+
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @GetMapping("/lista")
-    public ResponseEntity<List<MantenimientoSalidaDTO>> mostrarTodos(
-            @RequestParam(required = false) Long vehiculoId,
-            @RequestParam(required = false) EstadoMantenimiento estado) {
+    public ResponseEntity<List<MantenimientoSalidaDTO>>
+    mostrarTodos(
 
-        List<MantenimientoSalidaDTO> lista =
-                mantenimientoService.obtenerTodos(vehiculoId, estado);
+            @RequestParam(required = false)
+            Long vehiculoId,
 
-        if (!lista.isEmpty()) {
-            return ResponseEntity.ok(lista);
+            @RequestParam(required = false)
+            EstadoMantenimiento estado,
+
+            @RequestParam(required = false)
+            Boolean activo
+    ) {
+
+        List<MantenimientoSalidaDTO> mantenimientos =
+                mantenimientoService
+                        .obtenerTodos(
+                                vehiculoId,
+                                estado,
+                                activo
+                        );
+
+
+        if (!mantenimientos.isEmpty()) {
+
+            return ResponseEntity.ok(
+                    mantenimientos
+            );
         }
 
-        return ResponseEntity.notFound().build();
+
+        return ResponseEntity
+                .notFound()
+                .build();
     }
 
+
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @GetMapping("/{id}")
-    public ResponseEntity<MantenimientoSalidaDTO> buscarPorId(
-            @PathVariable Long id) {
+    public ResponseEntity<MantenimientoSalidaDTO>
+    buscarPorId(
+            @PathVariable Long id
+    ) {
 
-        Optional<MantenimientoSalidaDTO> mantenimiento =
-                mantenimientoService.obtenerPorId(id);
+        MantenimientoSalidaDTO mantenimiento =
+                mantenimientoService
+                        .obtenerPorId(id);
 
-        if (mantenimiento.isPresent()) {
-            return ResponseEntity.ok(mantenimiento.get());
+
+        if (mantenimiento != null) {
+
+            return ResponseEntity.ok(
+                    mantenimiento
+            );
         }
 
-        return ResponseEntity.notFound().build();
+
+        return ResponseEntity
+                .notFound()
+                .build();
     }
 
 
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @PostMapping
-    public ResponseEntity<MantenimientoSalidaDTO> crear(
-            @RequestBody MantenimientoGuardarDTO mantenimientoGuardar) {
+    public ResponseEntity<MantenimientoSalidaDTO>
+    crear(
 
-        MantenimientoSalidaDTO creado =
-                mantenimientoService.crear(mantenimientoGuardar);
+            @Valid
+            @RequestBody
+            MantenimientoGuardarDTO mantenimientoGuardar
+    ) {
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+        MantenimientoSalidaDTO mantenimiento =
+                mantenimientoService.crear(
+                        mantenimientoGuardar
+                );
+
+
+        return ResponseEntity.ok(
+                mantenimiento
+        );
     }
 
-    @PutMapping
-    public ResponseEntity<MantenimientoSalidaDTO> modificar(
-            @RequestBody MantenimientoModificarDTO mantenimientoModificar) {
 
-        MantenimientoSalidaDTO modificado =
-                mantenimientoService.modificar(mantenimientoModificar);
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
+    @PutMapping("/{id}")
+    public ResponseEntity<MantenimientoSalidaDTO>
+    editar(
 
-        return ResponseEntity.ok(modificado);
+            @PathVariable Long id,
+
+            @Valid
+            @RequestBody
+            MantenimientoModificarDTO mantenimientoModificar
+    ) {
+
+        mantenimientoModificar.setId(
+                id
+        );
+
+
+        MantenimientoSalidaDTO mantenimiento =
+                mantenimientoService.editar(
+                        mantenimientoModificar
+                );
+
+
+        return ResponseEntity.ok(
+                mantenimiento
+        );
     }
 
+
+    @PreAuthorize(
+            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
+    )
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+    public ResponseEntity<String>
+    eliminar(
+            @PathVariable Long id
+    ) {
 
-        boolean eliminado = mantenimientoService.eliminarPorId(id);
+        mantenimientoService.eliminarPorId(
+                id
+        );
 
-        if (eliminado) {
-            return ResponseEntity.ok().build();
-        }
 
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(
+                "Mantenimiento desactivado correctamente"
+        );
     }
 }
