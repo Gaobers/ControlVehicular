@@ -1,51 +1,115 @@
 package org.esfe.controladores;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.esfe.dtos.GastoRegistroRequest;
-import org.esfe.dtos.GastoResponse;
+
+import org.esfe.dtos.gasto.GastoGuardarDTO;
+import org.esfe.dtos.gasto.GastoModificarDTO;
+import org.esfe.dtos.gasto.GastoSalidaDTO;
 import org.esfe.servicio.interfaces.IGastoService;
-import org.springframework.http.HttpStatus;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
 @RestController
-@RequestMapping("/api/v1/gastos")
-@RequiredArgsConstructor
+@RequestMapping("/api/gastos")
 public class GastoController {
 
-    private final IGastoService gastoService;
+    @Autowired
+    private IGastoService gastoService;
 
-    @GetMapping("/{id}")
-    public ResponseEntity<GastoResponse> obtenerPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(gastoService.obtenerPorId(id));
-    }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<GastoResponse> actualizar(@PathVariable Long id, @Valid @RequestBody GastoRegistroRequest request) {
-        return ResponseEntity.ok(gastoService.actualizarGasto(id, request));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        gastoService.eliminarGasto(id);
-        return ResponseEntity.noContent().build();
-    }
-
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR')")
     @GetMapping
-    public ResponseEntity<List<GastoResponse>> obtenerTodos() {
-        return ResponseEntity.ok(gastoService.obtenerTodos());
+    public ResponseEntity<Page<GastoSalidaDTO>> mostrarTodosPaginados(
+            Pageable pageable) {
+
+        Page<GastoSalidaDTO> gastos =
+                gastoService.obtenerTodosPaginados(pageable);
+
+        if (gastos.hasContent()) {
+            return ResponseEntity.ok(gastos);
+        }
+
+        return ResponseEntity.notFound().build();
     }
 
+
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR')")
+    @GetMapping("/lista")
+    public ResponseEntity<List<GastoSalidaDTO>> mostrarTodos() {
+
+        List<GastoSalidaDTO> gastos =
+                gastoService.obtenerTodos();
+
+        if (!gastos.isEmpty()) {
+            return ResponseEntity.ok(gastos);
+        }
+
+        return ResponseEntity.notFound().build();
+    }
+
+
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR')")
+    @GetMapping("/{id}")
+    public ResponseEntity<GastoSalidaDTO> buscarPorId(
+            @PathVariable Long id) {
+
+        GastoSalidaDTO gasto =
+                gastoService.obtenerPorId(id);
+
+        if (gasto != null) {
+            return ResponseEntity.ok(gasto);
+        }
+
+        return ResponseEntity.notFound().build();
+    }
+
+
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR')")
     @PostMapping
-    public ResponseEntity<GastoResponse> registrar(@Valid @RequestBody GastoRegistroRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(gastoService.registrarGasto(request));
+    public ResponseEntity<GastoSalidaDTO> crear(
+            @Valid
+            @RequestBody GastoGuardarDTO gastoGuardar) {
+
+        GastoSalidaDTO gasto =
+                gastoService.crear(gastoGuardar);
+
+        return ResponseEntity.ok(gasto);
     }
 
-    @GetMapping("/auxiliar")
-    public ResponseEntity<List<GastoResponse>> obtenerAuxiliar() {
-        return ResponseEntity.ok(gastoService.obtenerAuxiliar());
+
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR')")
+    @PutMapping("/{id}")
+    public ResponseEntity<GastoSalidaDTO> editar(
+            @PathVariable Long id,
+            @Valid
+            @RequestBody GastoModificarDTO gastoModificar) {
+
+        gastoModificar.setId(id);
+
+        GastoSalidaDTO gasto =
+                gastoService.editar(gastoModificar);
+
+        return ResponseEntity.ok(gasto);
+    }
+
+
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> eliminar(
+            @PathVariable Long id) {
+
+        gastoService.eliminarPorId(id);
+
+        return ResponseEntity.ok(
+                "Gasto desactivado correctamente"
+        );
     }
 }
