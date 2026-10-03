@@ -9,9 +9,7 @@ import java.math.BigDecimal;
 
 public class RegistroKilometrajeModificarDTO {
 
-    @NotNull(
-            message = "El id es obligatorio"
-    )
+
     private Long id;
 
 
@@ -56,8 +54,11 @@ public class RegistroKilometrajeModificarDTO {
         return kilometraje;
     }
 
-    public void setKilometraje(BigDecimal kilometraje) {
-        this.kilometraje = kilometraje;
+    public void setKilometraje(
+            BigDecimal kilometraje
+    ) {
+        this.kilometraje =
+                kilometraje;
     }
 
 
@@ -65,8 +66,11 @@ public class RegistroKilometrajeModificarDTO {
         return observacion;
     }
 
-    public void setObservacion(String observacion) {
-        this.observacion = observacion;
+    public void setObservacion(
+            String observacion
+    ) {
+        this.observacion =
+                observacion;
     }
 
 
@@ -74,7 +78,10 @@ public class RegistroKilometrajeModificarDTO {
         return activo;
     }
 
-    public void setActivo(Boolean activo) {
-        this.activo = activo;
+    public void setActivo(
+            Boolean activo
+    ) {
+        this.activo =
+                activo;
     }
 }

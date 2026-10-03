@@ -17,8 +17,12 @@ import org.esfe.servicio.interfaces.IMantenimientoService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import org.springframework.http.HttpStatus;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -134,10 +138,12 @@ public class MantenimientoServiceImpl
 
 
         /*
-         * Posteriormente puede tomarse
+         * Posteriormente puede obtenerse
          * directamente del usuario autenticado.
          */
-        mantenimiento.setCreadoPor(null);
+        mantenimiento.setCreadoPor(
+                null
+        );
 
 
         mantenimiento.setMantenimientoOrigenId(
@@ -182,7 +188,12 @@ public class MantenimientoServiceImpl
         );
 
 
-        mantenimiento.setActivo(true);
+        /*
+         * Todo mantenimiento nuevo inicia activo.
+         */
+        mantenimiento.setActivo(
+                true
+        );
 
 
         Mantenimiento guardado =
@@ -202,6 +213,17 @@ public class MantenimientoServiceImpl
             MantenimientoModificarDTO dto
     ) {
 
+        /*
+         * El ID viene de /{id} en el controlador.
+         */
+        if (dto.getId() == null) {
+
+            throw new IllegalArgumentException(
+                    "El id del mantenimiento es obligatorio"
+            );
+        }
+
+
         validarObjetivo(
                 dto.getFechaObjetivo(),
                 dto.getKilometrajeObjetivo()
@@ -219,20 +241,13 @@ public class MantenimientoServiceImpl
         );
 
 
-        mantenimiento.setMantenimientoOrigenId(
-                dto.getMantenimientoOrigenId()
-        );
-
-
         mantenimiento.setServicio(
                 dto.getServicio().trim()
         );
 
 
-        mantenimiento.setObservaciones(
-                normalizarTextoOpcional(
-                        dto.getObservaciones()
-                )
+        mantenimiento.setEstado(
+                dto.getEstado()
         );
 
 
@@ -246,24 +261,14 @@ public class MantenimientoServiceImpl
         );
 
 
-        mantenimiento.setEstado(
-                dto.getEstado()
-        );
-
-
-        mantenimiento.setActivo(
-                dto.getActivo()
-        );
-
-
-        mantenimiento.setFechaRealizacion(
-                dto.getFechaRealizacion()
-        );
-
-
-        mantenimiento.setKilometrajeRealizacion(
-                dto.getKilometrajeRealizacion()
-        );
+        /*
+         * IMPORTANTE:
+         *
+         * Editar NO cambia mantenimiento.activo.
+         *
+         * El borrado lógico se controla
+         * exclusivamente desde eliminarPorId().
+         */
 
 
         Mantenimiento actualizado =
@@ -289,10 +294,10 @@ public class MantenimientoServiceImpl
 
         /*
          * BORRADO LÓGICO.
-         * Nunca eliminamos físicamente
-         * el historial.
          */
-        mantenimiento.setActivo(false);
+        mantenimiento.setActivo(
+                false
+        );
 
 
         mantenimientoRepository.save(
@@ -318,19 +323,36 @@ public class MantenimientoServiceImpl
 
 
     private void validarObjetivo(
-
             LocalDate fechaObjetivo,
-
             BigDecimal kilometrajeObjetivo
     ) {
 
+        /*
+         * La base de datos exige al menos
+         * una de las dos metas.
+         */
         if (
                 fechaObjetivo == null &&
                         kilometrajeObjetivo == null
         ) {
 
-            throw new IllegalArgumentException(
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
                     "Debe indicar fechaObjetivo o kilometrajeObjetivo"
+            );
+        }
+
+
+        if (
+                kilometrajeObjetivo != null &&
+                        kilometrajeObjetivo.compareTo(
+                                BigDecimal.ZERO
+                        ) < 0
+        ) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El kilometraje objetivo no puede ser negativo"
             );
         }
     }

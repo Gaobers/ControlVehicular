@@ -168,34 +168,21 @@ public class MantenimientoController {
     }
 
 
-    @PreAuthorize(
-            "hasAnyRole('CLIENTE', 'ADMINISTRADOR')"
-    )
+
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMINISTRADOR')")
     @PutMapping("/{id}")
-    public ResponseEntity<MantenimientoSalidaDTO>
-    editar(
-
+    public ResponseEntity<MantenimientoSalidaDTO> modificar(
             @PathVariable Long id,
+            @Valid @RequestBody MantenimientoModificarDTO mantenimientoModificar) {
 
-            @Valid
-            @RequestBody
-            MantenimientoModificarDTO mantenimientoModificar
-    ) {
+        mantenimientoModificar.setId(id);
 
-        mantenimientoModificar.setId(
-                id
-        );
-
-
-        MantenimientoSalidaDTO mantenimiento =
+        MantenimientoSalidaDTO modificado =
                 mantenimientoService.editar(
                         mantenimientoModificar
                 );
 
-
-        return ResponseEntity.ok(
-                mantenimiento
-        );
+        return ResponseEntity.ok(modificado);
     }
 
 
