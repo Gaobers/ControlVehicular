@@ -15,19 +15,34 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
+
         return new OpenAPI()
-                .info(new Info()
-                        .title("Control Vehicular API")
-                        .version("1.0.0")
-                        .description("API para gestión de vehículos y kilometraje")
-                        .license(new License()
-                                .name("MIT")
-                                .url("https://opensource.org/licenses/MIT")))
-                .servers(List.of(
-                        new Server()
-                                .url("/")
-                                .description("Servidor actual")
-                ))
-                .components(new Components());
+
+                .info(
+                        new Info()
+                                .title("Control Vehicular API")
+                                .version("1.0.0")
+                                .description(
+                                        "API REST para la gestión de vehículos, " +
+                                                "mantenimientos, recordatorios, gastos y usuarios"
+                                )
+                                .license(
+                                        new License()
+                                                .name("MIT")
+                                                .url("https://opensource.org/licenses/MIT")
+                                )
+                )
+
+                .servers(
+                        List.of(
+                                new Server()
+                                        .url("/")
+                                        .description("Servidor actual")
+                        )
+                )
+
+                .components(
+                        new Components()
+                );
     }
 }

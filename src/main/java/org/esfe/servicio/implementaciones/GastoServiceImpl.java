@@ -1,83 +1,388 @@
 package org.esfe.servicio.implementaciones;
 
-import org.esfe.dtos.GastoRegistroRequest;
-import org.esfe.dtos.GastoResponse;
+import jakarta.persistence.EntityNotFoundException;
+
+import org.esfe.dtos.gasto.GastoGuardarDTO;
+import org.esfe.dtos.gasto.GastoModificarDTO;
+import org.esfe.dtos.gasto.GastoSalidaDTO;
+
 import org.esfe.modelos.Gasto;
+
 import org.esfe.repositorios.GastoRepository;
+
 import org.esfe.servicio.interfaces.IGastoService;
-import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
+
 
 @Service
-@RequiredArgsConstructor
-public class GastoServiceImpl implements IGastoService {
+public class GastoServiceImpl
+        implements IGastoService {
 
     private final GastoRepository gastoRepository;
 
-    @Override
-    public GastoResponse registrarGasto(GastoRegistroRequest request) {
-        Gasto gasto = Gasto.builder()
-                .vehiculoId(request.getVehiculoId())
-                .categoria(request.getCategoria())
-                .monto(request.getMonto())
-                .fecha(request.getFecha())
-                .descripcion(request.getDescripcion())
-                .build();
 
-        Gasto guardado = gastoRepository.save(gasto);
-        return mapToResponse(guardado);
+    public GastoServiceImpl(
+            GastoRepository gastoRepository
+    ) {
+
+        this.gastoRepository =
+                gastoRepository;
     }
 
-    @Override
-    public GastoResponse obtenerPorId(Long id) {
-        Gasto gasto = gastoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Gasto no encontrado con id: " + id));
-        return mapToResponse(gasto);
-    }
 
     @Override
-    public List<GastoResponse> obtenerTodos() {
-        return gastoRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+    public Page<GastoSalidaDTO>
+    obtenerTodosPaginados(
+            Pageable pageable
+    ) {
+
+        return gastoRepository
+                .findAll(pageable)
+                .map(this::convertirASalida);
     }
+
 
     @Override
-    public GastoResponse actualizarGasto(Long id, GastoRegistroRequest request) {
-        Gasto gasto = gastoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Gasto no encontrado con id: " + id));
+    public List<GastoSalidaDTO>
+    obtenerTodos() {
 
-        gasto.setVehiculoId(request.getVehiculoId());
-        gasto.setCategoria(request.getCategoria());
-        gasto.setMonto(request.getMonto());
-        gasto.setFecha(request.getFecha());
-        gasto.setDescripcion(request.getDescripcion());
-
-        Gasto actualizado = gastoRepository.save(gasto);
-        return mapToResponse(actualizado);
+        return gastoRepository
+                .findAll()
+                .stream()
+                .map(this::convertirASalida)
+                .toList();
     }
+
 
     @Override
-    public void eliminarGasto(Long id) {
-        gastoRepository.deleteById(id);
+    public GastoSalidaDTO obtenerPorId(
+            Long id
+    ) {
+
+        Gasto gasto =
+                buscarEntidadPorId(id);
+
+        return convertirASalida(
+                gasto
+        );
     }
+
 
     @Override
-    public List<GastoResponse> obtenerAuxiliar() {
-        return obtenerTodos();
+    public GastoSalidaDTO crear(
+            GastoGuardarDTO gastoGuardar
+    ) {
+
+        Gasto gasto =
+                new Gasto();
+
+
+        gasto.setVehiculoId(
+                gastoGuardar.getVehiculoId()
+        );
+
+
+        gasto.setCategoriaId(
+                gastoGuardar.getCategoriaId()
+        );
+
+
+        gasto.setMonto(
+                gastoGuardar.getMonto()
+        );
+
+
+        gasto.setMoneda(
+                normalizarMoneda(
+                        gastoGuardar.getMoneda()
+                )
+        );
+
+
+        gasto.setFecha(
+                gastoGuardar.getFecha()
+        );
+
+
+        gasto.setDescripcion(
+                normalizarTextoOpcional(
+                        gastoGuardar.getDescripcion()
+                )
+        );
+
+
+        gasto.setNumeroComprobante(
+                normalizarTextoOpcional(
+                        gastoGuardar
+                                .getNumeroComprobante()
+                )
+        );
+
+
+        gasto.setProveedor(
+                normalizarTextoOpcional(
+                        gastoGuardar.getProveedor()
+                )
+        );
+
+
+        /*
+         * El usuario que registró el gasto
+         * se asociará posteriormente desde
+         * la autenticación/JWT.
+         *
+         * La BD permite NULL.
+         */
+        gasto.setRegistradoPor(null);
+
+
+        /*
+         * Todo gasto nuevo inicia activo.
+         */
+        gasto.setActivo(true);
+
+
+        Gasto guardado =
+                gastoRepository.save(gasto);
+
+
+        return convertirASalida(
+                guardado
+        );
     }
 
-    private GastoResponse mapToResponse(Gasto gasto) {
-        return GastoResponse.builder()
-                .id(gasto.getId())
-                .vehiculoId(gasto.getVehiculoId())
-                .categoria(gasto.getCategoria())
-                .monto(gasto.getMonto())
-                .fecha(gasto.getFecha())
-                .descripcion(gasto.getDescripcion())
-                .build();
+
+    @Override
+    public GastoSalidaDTO editar(
+            GastoModificarDTO gastoModificar
+    ) {
+
+        Gasto gasto =
+                buscarEntidadPorId(
+                        gastoModificar.getId()
+                );
+
+
+        gasto.setVehiculoId(
+                gastoModificar.getVehiculoId()
+        );
+
+
+        gasto.setCategoriaId(
+                gastoModificar.getCategoriaId()
+        );
+
+
+        gasto.setMonto(
+                gastoModificar.getMonto()
+        );
+
+
+        gasto.setMoneda(
+                normalizarMoneda(
+                        gastoModificar.getMoneda()
+                )
+        );
+
+
+        gasto.setFecha(
+                gastoModificar.getFecha()
+        );
+
+
+        gasto.setDescripcion(
+                normalizarTextoOpcional(
+                        gastoModificar.getDescripcion()
+                )
+        );
+
+
+        gasto.setNumeroComprobante(
+                normalizarTextoOpcional(
+                        gastoModificar
+                                .getNumeroComprobante()
+                )
+        );
+
+
+        gasto.setProveedor(
+                normalizarTextoOpcional(
+                        gastoModificar.getProveedor()
+                )
+        );
+
+
+        gasto.setActivo(
+                gastoModificar.getActivo()
+        );
+
+
+        Gasto actualizado =
+                gastoRepository.save(gasto);
+
+
+        return convertirASalida(
+                actualizado
+        );
+    }
+
+
+    @Override
+    public void eliminarPorId(
+            Long id
+    ) {
+
+        Gasto gasto =
+                buscarEntidadPorId(id);
+
+
+        /*
+         * BORRADO LÓGICO.
+         *
+         * Nunca hacemos deleteById()
+         * porque necesitamos conservar
+         * el historial financiero.
+         */
+        gasto.setActivo(false);
+
+
+        gastoRepository.save(
+                gasto
+        );
+    }
+
+
+    private Gasto buscarEntidadPorId(
+            Long id
+    ) {
+
+        return gastoRepository
+                .findById(id)
+                .orElseThrow(
+                        () ->
+                                new EntityNotFoundException(
+                                        "Gasto no encontrado con id: "
+                                                + id
+                                )
+                );
+    }
+
+
+    private String normalizarMoneda(
+            String moneda
+    ) {
+
+        if (
+                moneda == null ||
+                        moneda.isBlank()
+        ) {
+
+            return "USD";
+        }
+
+
+        return moneda
+                .trim()
+                .toUpperCase();
+    }
+
+
+    private String normalizarTextoOpcional(
+            String texto
+    ) {
+
+        if (
+                texto == null ||
+                        texto.isBlank()
+        ) {
+
+            return null;
+        }
+
+
+        return texto.trim();
+    }
+
+
+    private GastoSalidaDTO convertirASalida(
+            Gasto gasto
+    ) {
+
+        GastoSalidaDTO salida =
+                new GastoSalidaDTO();
+
+
+        salida.setId(
+                gasto.getId()
+        );
+
+
+        salida.setVehiculoId(
+                gasto.getVehiculoId()
+        );
+
+
+        salida.setCategoriaId(
+                gasto.getCategoriaId()
+        );
+
+
+        salida.setRegistradoPor(
+                gasto.getRegistradoPor()
+        );
+
+
+        salida.setMonto(
+                gasto.getMonto()
+        );
+
+
+        salida.setMoneda(
+                gasto.getMoneda()
+        );
+
+
+        salida.setFecha(
+                gasto.getFecha()
+        );
+
+
+        salida.setDescripcion(
+                gasto.getDescripcion()
+        );
+
+
+        salida.setNumeroComprobante(
+                gasto.getNumeroComprobante()
+        );
+
+
+        salida.setProveedor(
+                gasto.getProveedor()
+        );
+
+
+        salida.setActivo(
+                gasto.getActivo()
+        );
+
+
+        salida.setFechaRegistro(
+                gasto.getFechaRegistro()
+        );
+
+
+        salida.setFechaActualizacion(
+                gasto.getFechaActualizacion()
+        );
+
+
+        return salida;
     }
 }
