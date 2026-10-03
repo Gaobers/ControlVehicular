@@ -1,64 +1,106 @@
 package org.esfe.servicio.implementaciones;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import org.esfe.dtos.RecordatorioMantenimiento.RecordatorioMantenimientoGuardar;
 import org.esfe.dtos.RecordatorioMantenimiento.RecordatorioMantenimientoModificar;
 import org.esfe.dtos.RecordatorioMantenimiento.RecordatorioMantenimientoSalida;
+
 import org.esfe.modelos.RecordatorioMantenimiento;
-import org.esfe.repositorios.IRecordatorioMantenimientoRepository;
+
+import org.esfe.repositorios.MantenimientoRepository;
+import org.esfe.repositorios.RecordatorioMantenimientoRepository;
+
 import org.esfe.servicio.interfaces.IRecordatorioMantenimientoService;
+
 import org.modelmapper.ModelMapper;
+
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 @Service
+@Transactional
 public class RecordatorioMantenimientoService
         implements IRecordatorioMantenimientoService {
 
-    @Autowired
-    private IRecordatorioMantenimientoRepository recordatorioRepository;
 
     @Autowired
-    private ModelMapper modelMapper;
+    private RecordatorioMantenimientoRepository
+            recordatorioRepository;
+
+
+    @Autowired
+    private MantenimientoRepository
+            mantenimientoRepository;
+
+
+    @Autowired
+    private ModelMapper
+            modelMapper;
+
 
     @Override
-    public List<RecordatorioMantenimientoSalida> obtenerTodos() {
+    @Transactional(readOnly = true)
+    public List<RecordatorioMantenimientoSalida>
+    obtenerTodos() {
 
         List<RecordatorioMantenimiento> recordatorios =
                 recordatorioRepository.findAll();
 
-        return recordatorios.stream()
-                .map(recordatorio ->
-                        modelMapper.map(
-                                recordatorio,
-                                RecordatorioMantenimientoSalida.class
-                        )
-                )
-                .collect(Collectors.toList());
-    }
 
-    @Override
-    public Page<RecordatorioMantenimientoSalida> obtenerTodosPaginados(
-            Pageable pageable) {
-
-        Page<RecordatorioMantenimiento> page =
-                recordatorioRepository.findAll(pageable);
-
-        List<RecordatorioMantenimientoSalida> recordatoriosDto =
-                page.stream()
-                        .map(recordatorio ->
+        return recordatorios
+                .stream()
+                .map(
+                        recordatorio ->
                                 modelMapper.map(
                                         recordatorio,
                                         RecordatorioMantenimientoSalida.class
                                 )
+                )
+                .collect(
+                        Collectors.toList()
+                );
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RecordatorioMantenimientoSalida>
+    obtenerTodosPaginados(
+            Pageable pageable
+    ) {
+
+        Page<RecordatorioMantenimiento> page =
+                recordatorioRepository.findAll(
+                        pageable
+                );
+
+
+        List<RecordatorioMantenimientoSalida>
+                recordatoriosDto =
+                page.stream()
+                        .map(
+                                recordatorio ->
+                                        modelMapper.map(
+                                                recordatorio,
+                                                RecordatorioMantenimientoSalida.class
+                                        )
                         )
-                        .collect(Collectors.toList());
+                        .collect(
+                                Collectors.toList()
+                        );
+
 
         return new PageImpl<>(
                 recordatoriosDto,
@@ -67,16 +109,18 @@ public class RecordatorioMantenimientoService
         );
     }
 
+
     @Override
-    public RecordatorioMantenimientoSalida obtenerPorId(Long id) {
+    @Transactional(readOnly = true)
+    public RecordatorioMantenimientoSalida obtenerPorId(
+            Long id
+    ) {
 
         RecordatorioMantenimiento recordatorio =
-                recordatorioRepository.findById(id)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Recordatorio de mantenimiento no encontrado"
-                                )
-                        );
+                buscarEntidadPorId(
+                        id
+                );
+
 
         return modelMapper.map(
                 recordatorio,
@@ -84,39 +128,89 @@ public class RecordatorioMantenimientoService
         );
     }
 
+
     @Override
     public RecordatorioMantenimientoSalida crear(
-            RecordatorioMantenimientoGuardar recordatorioGuardar) {
+            RecordatorioMantenimientoGuardar recordatorioGuardar
+    ) {
+
+        /*
+         * Validamos que el mantenimiento
+         * relacionado realmente exista.
+         */
+        if (
+                !mantenimientoRepository.existsById(
+                        recordatorioGuardar
+                                .getMantenimientoId()
+                )
+        ) {
+
+            throw new IllegalArgumentException(
+                    "El mantenimiento seleccionado no existe"
+            );
+        }
+
 
         RecordatorioMantenimiento recordatorio =
                 new RecordatorioMantenimiento();
 
+
         recordatorio.setMantenimientoId(
-                recordatorioGuardar.getMantenimientoId()
+                recordatorioGuardar
+                        .getMantenimientoId()
         );
 
-        if (recordatorioGuardar.getDiasAnticipacion() != null) {
+
+        if (
+                recordatorioGuardar
+                        .getDiasAnticipacion()
+                        != null
+        ) {
+
             recordatorio.setDiasAnticipacion(
-                    recordatorioGuardar.getDiasAnticipacion()
+                    recordatorioGuardar
+                            .getDiasAnticipacion()
             );
-        } else {
-            recordatorio.setDiasAnticipacion(15);
-        }
 
-        if (recordatorioGuardar.getKilometrosAnticipacion() != null) {
-            recordatorio.setKilometrosAnticipacion(
-                    recordatorioGuardar.getKilometrosAnticipacion()
-            );
         } else {
-            recordatorio.setKilometrosAnticipacion(
-                    new BigDecimal("500")
+
+            recordatorio.setDiasAnticipacion(
+                    15
             );
         }
 
-        recordatorio.setActivo(true);
+
+        if (
+                recordatorioGuardar
+                        .getKilometrosAnticipacion()
+                        != null
+        ) {
+
+            recordatorio.setKilometrosAnticipacion(
+                    recordatorioGuardar
+                            .getKilometrosAnticipacion()
+            );
+
+        } else {
+
+            recordatorio.setKilometrosAnticipacion(
+                    new BigDecimal(
+                            "500"
+                    )
+            );
+        }
+
+
+        recordatorio.setActivo(
+                true
+        );
+
 
         RecordatorioMantenimiento guardado =
-                recordatorioRepository.save(recordatorio);
+                recordatorioRepository.save(
+                        recordatorio
+                );
+
 
         return modelMapper.map(
                 guardado,
@@ -124,33 +218,76 @@ public class RecordatorioMantenimientoService
         );
     }
 
+
     @Override
     public RecordatorioMantenimientoSalida editar(
-            RecordatorioMantenimientoModificar recordatorioModificar) {
+            RecordatorioMantenimientoModificar dto
+    ) {
+
+        /*
+         * El id es colocado desde el controlador
+         * usando el valor de /{id}.
+         */
+        if (dto.getId() == null) {
+
+            throw new IllegalArgumentException(
+                    "El id del recordatorio es obligatorio"
+            );
+        }
+
 
         RecordatorioMantenimiento recordatorio =
-                recordatorioRepository
-                        .findById(recordatorioModificar.getId())
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Recordatorio de mantenimiento no encontrado"
-                                )
-                        );
+                buscarEntidadPorId(
+                        dto.getId()
+                );
+
+
+        /*
+         * Evitamos que se asigne un
+         * mantenimiento inexistente.
+         */
+        if (
+                !mantenimientoRepository.existsById(
+                        dto.getMantenimientoId()
+                )
+        ) {
+
+            throw new IllegalArgumentException(
+                    "El mantenimiento seleccionado no existe"
+            );
+        }
+
+
+        recordatorio.setMantenimientoId(
+                dto.getMantenimientoId()
+        );
+
 
         recordatorio.setDiasAnticipacion(
-                recordatorioModificar.getDiasAnticipacion()
+                dto.getDiasAnticipacion()
         );
+
 
         recordatorio.setKilometrosAnticipacion(
-                recordatorioModificar.getKilometrosAnticipacion()
+                dto.getKilometrosAnticipacion()
         );
 
-        recordatorio.setActivo(
-                recordatorioModificar.getActivo()
-        );
+
+        /*
+         * IMPORTANTE:
+         *
+         * Editar NO modifica activo.
+         *
+         * El estado activo/inactivo se
+         * controla mediante el borrado lógico.
+         */
+
 
         RecordatorioMantenimiento actualizado =
-                recordatorioRepository.save(recordatorio);
+                recordatorioRepository.save(
+                        recordatorio
+                );
+
 
         return modelMapper.map(
                 actualizado,
@@ -158,19 +295,44 @@ public class RecordatorioMantenimientoService
         );
     }
 
+
     @Override
-    public void eliminarPorId(Long id) {
+    public void eliminarPorId(
+            Long id
+    ) {
 
         RecordatorioMantenimiento recordatorio =
-                recordatorioRepository.findById(id)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Recordatorio de mantenimiento no encontrado"
+                buscarEntidadPorId(
+                        id
+                );
+
+
+        /*
+         * Borrado lógico.
+         */
+        recordatorio.setActivo(
+                false
+        );
+
+
+        recordatorioRepository.save(
+                recordatorio
+        );
+    }
+
+
+    private RecordatorioMantenimiento buscarEntidadPorId(
+            Long id
+    ) {
+
+        return recordatorioRepository
+                .findById(id)
+                .orElseThrow(
+                        () ->
+                                new EntityNotFoundException(
+                                        "Recordatorio de mantenimiento no encontrado con id: "
+                                                + id
                                 )
-                        );
-
-        recordatorio.setActivo(false);
-
-        recordatorioRepository.save(recordatorio);
+                );
     }
 }

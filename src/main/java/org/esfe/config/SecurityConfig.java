@@ -41,6 +41,12 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(authRequest -> authRequest
 
+                        // Página inicial / comprobación del servidor
+                        .requestMatchers(
+                                "/",
+                                "/error"
+                        ).permitAll()
+
                         // Swagger
                         .requestMatchers(
                                 "/swagger-ui/**",
