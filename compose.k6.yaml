@@ -1,0 +1,30 @@
+name: controlvehicular-k6
+
+services:
+  k6:
+    image: grafana/k6:0.55.0
+    profiles:
+      - manual
+    working_dir: /scripts
+    entrypoint: ["k6"]
+    environment:
+      BASE_URL: ${BASE_URL:-https://controlvehicular-6s7g.onrender.com}
+      AUTH_TOKEN: ${AUTH_TOKEN:?Define AUTH_TOKEN en .env.k6 o en el entorno}
+      TEST_MODULE: ${TEST_MODULE:-vehiculos}
+      TEST_PROFILE: ${TEST_PROFILE:-baseline}
+      TEST_DURATION_SECONDS: ${TEST_DURATION_SECONDS:-60}
+      LOAD_VUS: ${LOAD_VUS:-5}
+      ITERATION_PAUSE_SECONDS: ${ITERATION_PAUSE_SECONDS:-1}
+      STRESS_STAGE_SECONDS: ${STRESS_STAGE_SECONDS:-30}
+      PAGE_SIZE: ${PAGE_SIZE:-20}
+      REPORT_NAME: ${REPORT_NAME:?Define REPORT_NAME para nombrar los reportes}
+      K6_WEB_DASHBOARD: "true"
+      K6_WEB_DASHBOARD_HOST: 0.0.0.0
+      K6_WEB_DASHBOARD_PORT: "5665"
+      K6_WEB_DASHBOARD_OPEN: "false"
+      K6_WEB_DASHBOARD_EXPORT: /reports/${REPORT_NAME}.html
+    ports:
+      - "127.0.0.1:5665:5665"
+    volumes:
+      - ./k6/scripts:/scripts:ro
+      - ./k6/reports:/reports
