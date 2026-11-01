@@ -36,5 +36,10 @@ build/
 *.log
 .env
 .env.*
+!.env.k6.example
+/.env.k6
+/zap/reports/*
+/k6/reports/*.html
+/k6/reports/*.json
 .DS_Store
 Thumbs.db

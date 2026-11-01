@@ -1,0 +1,20 @@
+services:
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    environment:
+      SECURITY_TEST_EMAIL: ${SECURITY_TEST_EMAIL:?Define SECURITY_TEST_EMAIL en .env.security}
+      SECURITY_TEST_PASSWORD: ${SECURITY_TEST_PASSWORD:?Define SECURITY_TEST_PASSWORD en .env.security}
+    volumes:
+      - ./security:/zap/wrk/security:ro
+      - ./zap/reports:/zap/wrk/reports
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - security-net
+    entrypoint: ["bash", "/zap/wrk/security/run-zap.sh"]
+
+networks:
+  security-net:
+    name: controlvehicular-security-net
+    internal: true
